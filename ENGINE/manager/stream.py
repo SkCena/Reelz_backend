@@ -163,8 +163,12 @@ async def _fan_out(data: LinkData, category: ContentCategory) -> tuple[Optional[
 
         # Record rich signals back to health tracker
         signals = _extract_rich_signals(local)
+        # Pass the last-seen HTTP status from the provider result so the
+        # admin panel can show per-provider error code breakdowns.
+        http_status = getattr(result, 'http_status', 0)
         await record(
             p.id, outcome, ms,
+            http_status=http_status,
             category=category,
             **signals,
         )
