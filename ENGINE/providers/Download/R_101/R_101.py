@@ -46,11 +46,10 @@ class R101Provider(Provider):
             #       type="mp4",
             #       quality="1080p",
             #       size_bytes=2_147_483_648,
-            #       # Set referer/origin/user_agent ONLY if the CDN requires them.
-            #       # Leave as None (default) if the URL works without them.
-            #       referer="https://cdn.example.com/",
-            #       origin="https://cdn.example.com",
-            #       user_agent=None,
+            #       # Set playback_headers ONLY if the CDN requires them.
+            #       # Include any headers the CDN needs (Referer, Origin, Authorization, etc.)
+            #       # Leave as {} (default) if the URL works without extra headers.
+            #       playback_headers={"Referer": "https://cdn.example.com/", "Origin": "https://cdn.example.com"},
             #   ))
             #
             # HLS example (quality-specific index.m3u8, NOT master):

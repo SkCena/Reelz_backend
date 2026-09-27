@@ -107,9 +107,7 @@ class R019Provider(Provider):
                                         url=url,
                                         type="m3u8" if ".m3u8" in url else "mp4",
                                         server="R-019 HdHub4u",
-                                        referer=base_url or "",
-                                        origin=None,
-                                        user_agent=None,
+                                        playback_headers={"Referer": base_url or ""},
                                     ))
                 else:
                     ep_re = re.compile(rf"episode\s*{data.episode}", re.I)
@@ -136,9 +134,7 @@ class R019Provider(Provider):
                                                     url=url,
                                                     type="m3u8" if ".m3u8" in url else "mp4",
                                                     server="R-019 HdHub4u",
-                                                    referer=base_url or "",
-                                                    origin=None,
-                                                    user_agent=None,
+                                                    playback_headers={"Referer": base_url or ""},
                                                 ))
                             sib = sib.find_next_sibling()
         except Exception:

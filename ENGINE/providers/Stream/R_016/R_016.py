@@ -1,5 +1,5 @@
 """
-ENGINE/providers/Stream/R-016/R_016.py — AnimeNoSub (anime only)
+ENGINE/providers/Stream/R-016/R-016.py — AnimeNoSub (anime only)
 
 DooPlay WordPress site, plain HTTP.
 Flow:
@@ -9,12 +9,19 @@ Flow:
                                   -> { sources: { file }, tracks: [{file,.vtt,label}] }
   DUB: swap /sub -> /dub in megaplay URL.
 
+Headers required:
+  - Page fetches:    User-Agent: standard browser UA
+  - megaplay GET:    Referer: https://animenosub.to/   User-Agent: standard browser UA
+  - getSources GET:  Referer: <megaplay_origin>/   X-Requested-With: XMLHttpRequest
+  - Playback m3u8:   Referer: <megaplay_origin>/   Origin: <megaplay_origin>
+
 Ported from Streamplay's AnimeNoSubProvider.
 """
 from __future__ import annotations
 
 import asyncio
 import re
+from urllib.parse import urlparse
 
 from ENGINE.providers.base import Provider, LinkData, Result, Stream, Subtitle
 from ENGINE.tools.http import get_client, UA
@@ -34,28 +41,40 @@ def _season_score(title: str, want_season: int) -> int:
     return 1 if want_season == 1 else 0
 
 
-async def _resolve_megaplay(embed_url: str) -> tuple[str | None, list[Subtitle]]:
+async def _resolve_megaplay(embed_url: str) -> tuple[str | None, list[Subtitle], str]:
+    """
+    Returns (m3u8_url_or_None, subtitles, megaplay_origin).
+    megaplay_origin is derived from embed_url and needed for playback headers.
+    """
     subs: list[Subtitle] = []
+    parsed = urlparse(embed_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
     try:
         client = await get_client()
-        page = (await client.get(embed_url, headers={"User-Agent": UA, "Referer": f"{_BASE}/"}, timeout=15)).text
+        page = (await client.get(
+            embed_url,
+            headers={"User-Agent": UA, "Referer": f"{_BASE}/"},
+            timeout=15,
+        )).text
         id_m = re.search(r'data-id="(\d+)"', page)
         if not id_m:
-            return None, subs
+            return None, subs, origin
         data_id = id_m.group(1)
-        from urllib.parse import urlparse
-        origin = f"{urlparse(embed_url).scheme}://{urlparse(embed_url).netloc}"
         r = (await client.get(
             f"{origin}/stream/getSources?id={data_id}",
-            headers={"User-Agent": UA, "Referer": f"{origin}/", "X-Requested-With": "XMLHttpRequest"},
+            headers={
+                "User-Agent": UA,
+                "Referer": f"{origin}/",
+                "X-Requested-With": "XMLHttpRequest",
+            },
             timeout=15,
         )).json()
         for t in (r.get("tracks") or []):
             if t.get("kind") == "captions" and t.get("file"):
                 subs.append(Subtitle(url=t["file"], language=t.get("label") or "Sub"))
-        return (r.get("sources") or {}).get("file"), subs
+        return (r.get("sources") or {}).get("file"), subs, origin
     except Exception:
-        return None, subs
+        return None, subs, origin
 
 
 class R016Provider(Provider):
@@ -123,7 +142,11 @@ class R016Provider(Provider):
                 return result
 
             for pick in candidates[:5]:
-                anime_html = (await client.get(pick["url"], headers={"User-Agent": UA, "Referer": f"{_BASE}/"}, timeout=15)).text
+                anime_html = (await client.get(
+                    pick["url"],
+                    headers={"User-Agent": UA, "Referer": f"{_BASE}/"},
+                    timeout=15,
+                )).text
                 from ENGINE.tools.scraper import parse
                 asoup = parse(anime_html)
                 ep_url = ""
@@ -135,7 +158,11 @@ class R016Provider(Provider):
                 if not ep_url:
                     continue
 
-                ep_html = (await client.get(ep_url, headers={"User-Agent": UA, "Referer": pick["url"]}, timeout=15)).text
+                ep_html = (await client.get(
+                    ep_url,
+                    headers={"User-Agent": UA, "Referer": pick["url"]},
+                    timeout=15,
+                )).text
                 iframe_m = re.search(r'<iframe[^>]+(?:data-src|src)="([^"]+)"', ep_html, re.I)
                 if not iframe_m:
                     continue
@@ -150,18 +177,20 @@ class R016Provider(Provider):
                         variants.append({"url": dub_url, "dub": True})
 
                     async def resolve_variant(v: dict) -> None:
-                        m3u8, subs = await _resolve_megaplay(v["url"])
+                        # origin is derived inside _resolve_megaplay and returned
+                        # so it is always in scope for the playback_headers below
+                        m3u8, subs, mp_origin = await _resolve_megaplay(v["url"])
                         for sub in subs:
                             if not any(s.url == sub.url for s in result.subtitles):
                                 result.subtitles.append(sub)
                         if m3u8 and not any(s.url == m3u8 for s in result.streams):
                             result.streams.append(Stream(
-                                url=m3u8, type="m3u8",
+                                url=m3u8,
+                                type="m3u8",
                                 server=f"R-016 AnimeNoSub {'DUB' if v['dub'] else 'SUB'}",
-                                headers={"Referer": "https://megaplay.buzz/", "Origin": "https://megaplay.buzz"},
-                                referer=f"{origin}/",
-                                origin=None,
-                                user_agent=None,
+                                # CDN validates Referer + Origin from the megaplay embed domain
+                                headers={"Referer": f"{mp_origin}/", "Origin": mp_origin},
+                                playback_headers={"Referer": f"{mp_origin}/", "Origin": mp_origin},
                             ))
 
                     await asyncio.gather(*[resolve_variant(v) for v in variants])

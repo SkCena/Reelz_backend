@@ -46,6 +46,15 @@ async def get_shorts(
     from ENGINE.manager.shorts import get_shorts as engine_shorts
     result = await engine_shorts(tmdb_id=0, media_type="movie", page=page, fresh=bool(fresh))
     raw = result.get("shorts", [])
+
+    # Filter to valid URLs first, THEN slice — so has_more reflects the true
+    # pool size, not the already-capped slice (Bug fix: was len(items) >= limit
+    # which was always True when providers returned exactly `limit` items and
+    # always False when they returned fewer, regardless of whether more existed).
+    valid_raw = [s for s in raw if s.get("url")]
+    page_raw  = valid_raw[:limit]
+    has_more  = len(valid_raw) > limit
+
     items = [
         {
             "id":        _make_id(s.get("url", ""), i),
@@ -55,9 +64,8 @@ async def get_shorts(
             "thumbnail": s.get("thumbnail") or None,
             "headers":   _merge_headers(s.get("headers"), s.get("referer"), s.get("origin"), s.get("user_agent")),
         }
-        for i, s in enumerate(raw[:limit]) if s.get("url")
+        for i, s in enumerate(page_raw)
     ]
-    has_more = len(items) >= limit
 
     cache_ttl_ms = result.get("cache_ttl_ms") or None
     cf_max_age_s = result.get("cf_max_age_s") or None

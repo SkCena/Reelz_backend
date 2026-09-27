@@ -140,22 +140,20 @@ async def _fan_out(data: LinkData, category: ContentCategory) -> tuple[Optional[
                 ttl_app, _ = compute_ttl_from_expires(s.expires_at_ms, p.id, s.type)
 
             entry = {
-                "provider":    p.name,
-                "provider_id": p.id,
-                "server":      s.server or p.name,
-                "url":         s.url,
-                "type":        s.type,
-                "quality":     s.quality,
-                "headers":     s.headers,
-                "playable":    s.type != "iframe",
-                "expires_at_ms": s.expires_at_ms,
-                # Playback headers — None means the app should omit that header.
-                # Only set by providers that actually require them from the CDN.
-                "referer":     s.referer,
-                "origin":      s.origin,
-                "user_agent":  s.user_agent,
-                "_ttl_seconds": ttl_app,
-                "_has_subtitles": bool(result.subtitles),
+                "provider":        p.name,
+                "provider_id":     p.id,
+                "server":          s.server or p.name,
+                "url":             s.url,
+                "type":            s.type,
+                "quality":         s.quality,
+                "headers":         s.headers,
+                "playable":        s.type != "iframe",
+                "expires_at_ms":   s.expires_at_ms,
+                # Playback headers — whatever the provider says the CDN needs.
+                # Empty dict means no extra headers required.
+                "playback_headers": s.playback_headers,
+                "_ttl_seconds":     ttl_app,
+                "_has_subtitles":   bool(result.subtitles),
             }
             local.append(entry)
 

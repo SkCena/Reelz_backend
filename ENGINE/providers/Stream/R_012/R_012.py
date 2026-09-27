@@ -248,9 +248,7 @@ class R012Provider(Provider):
                                 type="m3u8" if ".m3u8" in url else "mp4",
                                 server=f"R-012 Castle · {rq['name']}",
                                 headers={"Referer": f"{_API}/"},
-                                referer=_API,
-                                origin="https://www.hlowb.com",
-                                user_agent="okhttp/4.9.2",
+                                playback_headers={"Referer": _API, "Origin": "https://www.hlowb.com", "User-Agent": "okhttp/4.9.2"},
                             ))
                             for sub in (vd.get("subtitles") or []):
                                 if sub.get("url"):

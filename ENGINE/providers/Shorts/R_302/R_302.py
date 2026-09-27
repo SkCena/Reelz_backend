@@ -1,47 +1,31 @@
 """
 ENGINE/providers/Shorts/R_302/R_302.py — Archive.org TikTok Shorts
 
-Pulls short-form videos from the `tiktoks` collection on archive.org.
+BUG FIXED: /metadata/{id}/files returns {"result": [...]} (a dict), NOT a raw
+list. The old code did `if not isinstance(files, list): continue` which skipped
+every single item. Now uses the full /metadata/{id} endpoint and reads
+response["files"] — the correct shape archive.org has always returned.
 
-The old strategy assumed every item's downloadable file was named
-{identifier}.mp4.  Archive.org changed: many items use different
-filenames or sub-paths.  The correct pattern is now:
-
-  1. Search the Advanced Search API (as before) to get identifiers.
-  2. For each identifier, call the metadata API:
-       https://archive.org/metadata/{identifier}/files
-     to find the first .mp4 file entry.  The canonical download URL is:
-       https://archive.org/download/{identifier}/{filename}
-  3. Thumbnail: use the item-image endpoint (still valid):
-       https://archive.org/services/img/{identifier}
-
-To avoid per-item metadata calls blocking the whole response, we resolve
-only a small batch (RESOLVE_LIMIT) and stop as soon as WANT valid URLs
-are found.
-
-Type: mp4
-Flow:
-  1. Probe total count via Advanced Search (rows=0).
-  2. Pick a random page, fetch FETCH_ROWS identifiers.
-  3. For each identifier (up to RESOLVE_LIMIT), call metadata API to
-     find the real .mp4 filename.
-  4. Build Short objects with verified URLs.
+PERF FIXED: metadata calls are now concurrent (asyncio.gather) instead of
+sequential. Sequential with RESOLVE_LIMIT=60 × 8s timeout would never finish
+inside the 45s safe_run budget; concurrent resolves in one round-trip window.
 """
 from __future__ import annotations
 
+import asyncio
 import random
 
 from ENGINE.providers.base import Provider, LinkData, Result, Short
 from ENGINE.tools.http import get_client, UA
 
-_SEARCH_URL   = "https://archive.org/advancedsearch.php"
-_META_URL     = "https://archive.org/metadata/{identifier}/files"
-_THUMB_URL    = "https://archive.org/services/img/{identifier}"
-_COLLECTION   = "tiktoks"
-_FETCH_ROWS   = 100   # items fetched from search per call
-_RESOLVE_LIMIT = 60   # max identifiers we attempt to resolve
-_WANT          = 30   # stop once we have this many valid shorts
-_HTTP_TIMEOUT  = 8    # seconds per HTTP call
+_SEARCH_URL    = "https://archive.org/advancedsearch.php"
+_META_URL      = "https://archive.org/metadata/{identifier}"   # full item metadata
+_THUMB_URL     = "https://archive.org/services/img/{identifier}"
+_COLLECTION    = "tiktoks"
+_FETCH_ROWS    = 50    # identifiers fetched from search
+_RESOLVE_LIMIT = 20    # concurrent metadata calls (stays well under 45s budget)
+_WANT          = 15    # stop after collecting this many valid shorts
+_HTTP_TIMEOUT  = 8     # seconds per HTTP call
 
 
 class R302Provider(Provider):
@@ -53,7 +37,7 @@ class R302Provider(Provider):
         try:
             client = await get_client()
 
-            # ── Step 1: probe total count ─────────────────────────────────
+            # ── Step 1: probe total count ──────────────────────────────────
             probe = await client.get(
                 _SEARCH_URL,
                 params={
@@ -71,7 +55,7 @@ class R302Provider(Provider):
             if not total:
                 return result
 
-            # ── Step 2: random page, fetch identifiers ────────────────────
+            # ── Step 2: random page, fetch identifiers ─────────────────────
             max_page = max(1, total // _FETCH_ROWS)
             page     = random.randint(1, max_page)
 
@@ -94,18 +78,14 @@ class R302Provider(Provider):
             if not docs:
                 return result
 
-            # Shuffle so we don't always resolve the same page-top items
             random.shuffle(docs)
+            docs = docs[:_RESOLVE_LIMIT]
 
-            # ── Step 3: resolve real filenames via metadata API ───────────
-            for doc in docs[:_RESOLVE_LIMIT]:
-                if len(result.shorts) >= _WANT:
-                    break
-
+            # ── Step 3: resolve filenames concurrently ─────────────────────
+            async def resolve(doc: dict) -> Short | None:
                 iid = doc.get("identifier", "").strip()
                 if not iid:
-                    continue
-
+                    return None
                 try:
                     meta_resp = await client.get(
                         _META_URL.format(identifier=iid),
@@ -113,17 +93,18 @@ class R302Provider(Provider):
                         timeout=_HTTP_TIMEOUT,
                     )
                     if meta_resp.status_code >= 400:
-                        continue
+                        return None
 
-                    files = meta_resp.json()
+                    # Correct shape: {"metadata": {...}, "files": [...], ...}
+                    meta_json = meta_resp.json()
+                    files = meta_json.get("files") or []
                     if not isinstance(files, list):
-                        continue
+                        return None
 
-                    # Find first mp4 that is not a derivative/thumbnail
                     mp4_name = None
+                    # Prefer original (non-derivative) mp4
                     for f in files:
-                        name = f.get("name", "")
-                        fmt  = f.get("format", "").lower()
+                        name   = f.get("name", "")
                         source = f.get("source", "").lower()
                         if (
                             name.lower().endswith(".mp4")
@@ -132,8 +113,7 @@ class R302Provider(Provider):
                         ):
                             mp4_name = name
                             break
-
-                    # Fall back to any mp4 if no original found
+                    # Fall back to any mp4
                     if not mp4_name:
                         for f in files:
                             name = f.get("name", "")
@@ -142,25 +122,28 @@ class R302Provider(Provider):
                                 break
 
                     if not mp4_name:
-                        continue
+                        return None
 
+                    title = (
+                        doc.get("title") or doc.get("description") or iid
+                    ).strip()
+                    if len(title) > 120:
+                        title = title[:117] + "…"
+
+                    return Short(
+                        url       = f"https://archive.org/download/{iid}/{mp4_name}",
+                        title     = title,
+                        thumbnail = _THUMB_URL.format(identifier=iid),
+                    )
                 except Exception:
-                    continue
+                    return None
 
-                title = (
-                    doc.get("title") or doc.get("description") or iid
-                ).strip()
-                if len(title) > 120:
-                    title = title[:117] + "…"
-
-                mp4_url   = f"https://archive.org/download/{iid}/{mp4_name}"
-                thumb_url = _THUMB_URL.format(identifier=iid)
-
-                result.shorts.append(Short(
-                    url       = mp4_url,
-                    title     = title,
-                    thumbnail = thumb_url,
-                ))
+            resolved = await asyncio.gather(*[resolve(d) for d in docs])
+            for s in resolved:
+                if s is not None:
+                    result.shorts.append(s)
+                    if len(result.shorts) >= _WANT:
+                        break
 
         except Exception:
             pass

@@ -68,9 +68,7 @@ class R006Provider(Provider):
                             type="m3u8" if is_m3u8 else "mp4",
                             server=f"R-006 Xpass [{name}]",
                             headers={"Referer": base_ref},
-                            referer=base_ref,
-                            origin=None,
-                            user_agent=None,
+                            playback_headers={"Referer": base_ref},
                         ))
                 except Exception:
                     continue

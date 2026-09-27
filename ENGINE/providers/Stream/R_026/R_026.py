@@ -70,9 +70,7 @@ class R026Provider(Provider):
                 type="m3u8",
                 server="R-026 VidLink",
                 quality="1080p",
-                referer=f"{_API}/",
-                origin=_API,
-                user_agent=UA,
+                playback_headers={"Referer": f"{_API}/", "Origin": _API, "User-Agent": UA},
             ))
         except Exception:
             pass

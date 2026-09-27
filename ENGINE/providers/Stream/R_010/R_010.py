@@ -1,9 +1,19 @@
 """
-ENGINE/providers/Stream/R-010/R_010.py — PrimeVids (NineTV / moviesapi.club)
+ENGINE/providers/Stream/R-010/R-010.py — PrimeVids (NineTV / moviesapi.club)
 
-Loads moviesapi.club/<type>/<id>, pulls the embedded iframe src,
-follows the iframe and tries to extract a direct m3u8/mp4.
-If not found, returns the iframe as a passthrough stream.
+Type: m3u8 | iframe
+Flow:
+  1. GET moviesapi.club/<type>/<id> with Referer=pressplay.top -> scrape <iframe src>
+  2. GET iframe URL with Referer=moviesapi.club/ -> search for direct m3u8/mp4
+  3. If direct URL found, push as m3u8 stream.
+  4. Fallback: return iframe itself as type=iframe.
+
+Headers required:
+  - Initial page GET: Referer: https://pressplay.top/
+  - Iframe GET: Referer: https://moviesapi.club/
+  - Playback (m3u8): Referer: <iframe_url>  (CDN checks iframe origin)
+  - Playback (iframe): no special headers needed beyond what the player injects
+
 Ported from Streamplay's NineTvProvider.
 """
 from __future__ import annotations
@@ -43,7 +53,10 @@ class R010Provider(Provider):
 
             # Try to resolve a direct stream from the embed page
             try:
-                embed_html = (await client.get(iframe, headers={"User-Agent": UA, "Referer": f"{_API}/"})).text
+                embed_html = (await client.get(
+                    iframe,
+                    headers={"User-Agent": UA, "Referer": f"{_API}/"},
+                )).text
                 for pattern in [
                     r'(https?:[^"\'\\s]+\.m3u8[^"\'\\s]*)',
                     r'file\s*:\s*["\']([^"\']+\.m3u8[^"\']*)["\']',
@@ -55,10 +68,9 @@ class R010Provider(Provider):
                             url=link,
                             type="m3u8",
                             server="R-010 PrimeVids",
+                            # CDN validates that the request came from the iframe's origin
                             headers={"Referer": iframe},
-                            referer=_REFERER,
-                            origin=None,
-                            user_agent=None,
+                            playback_headers={"Referer": iframe},
                         ))
                         return result
             except Exception:
@@ -69,10 +81,9 @@ class R010Provider(Provider):
                 url=iframe,
                 type="iframe",
                 server="R-010 PrimeVids",
+                # Referer for the iframe fetch itself
                 headers={"Referer": f"{_API}/"},
-                referer=_REFERER,
-                origin=None,
-                user_agent=None,
+                playback_headers={},
             ))
         except Exception:
             pass

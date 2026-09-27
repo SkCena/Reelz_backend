@@ -79,15 +79,13 @@ async def get_subtitles(req, *, fresh: bool = False) -> dict:
                 else:
                     fmt = "srt"
             local.append({
-                "provider":   p.name,
-                "language":   sub.language,
-                "label":      sub.label or p.name,
-                "url":        sub.url,
-                "format":     fmt,
-                # Fetch headers — None means the app should omit that header.
-                "referer":    getattr(sub, "referer", None),
-                "origin":     getattr(sub, "origin", None),
-                "user_agent": getattr(sub, "user_agent", None),
+                "provider":        p.name,
+                "language":        sub.language,
+                "label":           sub.label or p.name,
+                "url":             sub.url,
+                "format":          fmt,
+                # Fetch headers — whatever the provider says the CDN needs.
+                "playback_headers": sub.playback_headers,
             })
         outcome = "found" if local else "failed" if isinstance(result, TimedOut) else "empty"
         await record(p.id, outcome, ms)

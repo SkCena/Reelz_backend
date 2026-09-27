@@ -139,9 +139,7 @@ class R017Provider(Provider):
                             type="m3u8",
                             server="R-017 AnimeWorld",
                             headers={"Referer": f"{_ZEPHYR}/"},
-                            referer=f"{_ZEPHYR}/",
-                            origin=None,
-                            user_agent=None,
+                            playback_headers={"Referer": f"{_ZEPHYR}/"},
                         ))
                 except Exception:
                     pass
@@ -157,9 +155,7 @@ class R017Provider(Provider):
                                 type="m3u8",
                                 server="R-017 AnimeWorld",
                                 headers={"Referer": f"{_ZEPHYR}/"},
-                                referer=f"{_ZEPHYR}/",
-                                origin=None,
-                                user_agent=None,
+                                playback_headers={"Referer": f"{_ZEPHYR}/"},
                             ))
             else:
                 result.streams.append(Stream(
@@ -167,9 +163,7 @@ class R017Provider(Provider):
                     type="iframe",
                     server="R-017 AnimeWorld",
                     headers={"Referer": f"{_BASE}/"},
-                    referer=f"{_ZEPHYR}/",
-                    origin=None,
-                    user_agent=None,
+                    playback_headers={"Referer": f"{_ZEPHYR}/"},
                 ))
         except Exception:
             pass

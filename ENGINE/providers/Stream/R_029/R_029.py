@@ -1,14 +1,21 @@
 """
-ENGINE/providers/Stream/R_029/R_029.py — VidZee
+ENGINE/providers/Stream/R-029/R-029.py — VidZee
 
 Type: m3u8 | mp4
 Flow:
-  1. Fan out across servers sr=1..8 concurrently
+  1. Fan out across servers sr=1..8 concurrently.
   2. GET player.vidzee.wtf/api/server?id=<tmdb>&sr=<n>[&ss=<s>&ep=<e>]
   3. Decrypt each encrypted link with AES-256-CBC
-     key = "pleasedontscrapemesaywallahi" padded/truncated to 32 bytes
-     encoded as base64("<ivB64>:<ciphertextB64>")
-  4. Push m3u8/mp4 streams + subtitle tracks
+     key = "pleasedontscrapemesaywallahi" padded/truncated to 32 bytes.
+     encoded as base64("<ivB64>:<ciphertextB64>").
+  4. Push m3u8/mp4 streams + subtitle tracks.
+
+Headers required:
+  - API GET: Referer: https://player.vidzee.wtf/  (server returns 403 without it)
+  - Playback: Referer = value from response json.headers.referer (server-specific)
+    Falls back to https://player.vidzee.wtf/ if not present.
+
+Ported from Streamplay's VidzeeProvider.
 """
 from __future__ import annotations
 
@@ -65,7 +72,12 @@ class R029Provider(Provider):
                     else:
                         url = f"{_BASE}/api/server?id={data.tmdb_id}&sr={sr}"
 
-                    res = await client.get(url, headers={"User-Agent": UA}, timeout=12)
+                    # Referer is required — vidzee returns 403 without it
+                    res = await client.get(
+                        url,
+                        headers={"User-Agent": UA, "Referer": _REFERER},
+                        timeout=12,
+                    )
                     if res.status_code >= 400:
                         return
                     j = res.json()
@@ -99,6 +111,8 @@ class R029Provider(Provider):
                         if not final_url.startswith("http"):
                             continue
 
+                        # Use the referer the server told us; each sub-server may
+                        # have a different CDN that checks Origin/Referer
                         referer = global_hdrs.get("referer", _REFERER)
                         display = f"VidZee {name} ({lang} - {flag})" if flag.strip() else f"VidZee {name} ({lang})"
                         stream_type = "m3u8" if vtype.lower() == "hls" else "mp4"
@@ -109,7 +123,7 @@ class R029Provider(Provider):
                             server=f"R-029 {display}",
                             quality="1080p",
                             headers={**global_hdrs, "Referer": referer},
-                            referer=referer,
+                            playback_headers={"Referer": referer},
                         ))
 
                     for sub in (j.get("tracks") or []):

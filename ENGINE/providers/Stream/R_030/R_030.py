@@ -151,8 +151,7 @@ class R030Provider(Provider):
                             server=f"R-030 {label}",
                             quality=f"{quality}p" if quality > 0 else None,
                             headers={"Origin": origin, "Referer": referer, "User-Agent": ua},
-                            referer=referer,
-                            origin=origin,
+                            playback_headers={"Referer": referer, "Origin": origin},
                         ))
 
                     async with lock:

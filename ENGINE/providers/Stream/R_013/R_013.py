@@ -190,9 +190,7 @@ class R013Provider(Provider):
                             server=f"R-013 HDRezka · {tr['name']}{' ' + st['quality'] + 'p' if st['quality'] else ''}",
                             quality=st["quality"] or None,
                             headers={"Referer": f"{_BASE}/", "User-Agent": UA},
-                            referer=f"{_BASE}/",
-                            origin=None,
-                            user_agent=None,
+                            playback_headers={"Referer": f"{_BASE}/"},
                         ))
                 except Exception:
                     continue

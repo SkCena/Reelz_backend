@@ -102,9 +102,7 @@ class R024Provider(Provider):
                             url=url,
                             type="m3u8" if ".m3u8" in url else "mp4",
                             server="R-024 UhdMovies",
-                            referer=None,
-                            origin=None,
-                            user_agent=None,
+                            playback_headers={},
                         ))
         except Exception:
             pass

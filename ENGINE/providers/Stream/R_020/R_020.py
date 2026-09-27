@@ -100,9 +100,7 @@ class R020Provider(Provider):
                             url=media_url,
                             type="m3u8" if ".m3u8" in media_url else "mp4",
                             server="R-020 4KHdHub",
-                            referer=None,
-                            origin=None,
-                            user_agent=None,
+                            playback_headers={},
                         ))
         except Exception:
             pass

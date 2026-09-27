@@ -78,9 +78,7 @@ class R008Provider(Provider):
                     type="m3u8" if ".m3u8" in link else "mp4",
                     server=f"R-008 DahmerMovies {tags}".strip(),
                     quality=_quality_label(link_text),
-                    referer=f"{_API}/",
-                    origin=None,
-                    user_agent=None,
+                    playback_headers={"Referer": f"{_API}/"},
                 ))
         except Exception:
             pass

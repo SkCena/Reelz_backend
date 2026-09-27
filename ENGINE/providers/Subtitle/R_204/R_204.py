@@ -70,9 +70,7 @@ class R204Provider(Provider):
                         language="en",
                         label=quality or "YIFY",
                         format="srt",
-                        referer=None,
-                        origin=None,
-                        user_agent=None,
+                        playback_headers={},
                     ))
                 else:
                     # fallback: any download anchor in the row
@@ -84,9 +82,7 @@ class R204Provider(Provider):
                             language="en",
                             label=quality or "YIFY",
                             format="srt",
-                            referer=None,
-                            origin=None,
-                            user_agent=None,
+                            playback_headers={},
                         ))
                 if len(result.subtitles) >= 10:
                     break

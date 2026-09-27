@@ -109,7 +109,7 @@ class R102Provider(Provider):
                                 quality=lbl,
                                 language="English",
                                 headers=dict(headers),
-                                referer=f"{_ORIGIN}/",
+                                playback_headers={"Referer": f"{_ORIGIN}/"},
                             ))
                         elif ".m3u8" in link:
                             # Resolve HLS master → per-quality index.m3u8
@@ -121,7 +121,7 @@ class R102Provider(Provider):
                                     quality=v["quality"],
                                     language="English",
                                     headers=dict(headers),
-                                    referer=f"{_ORIGIN}/",
+                                    playback_headers={"Referer": f"{_ORIGIN}/"},
                                 ))
 
                     async with lock:

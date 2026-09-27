@@ -10,12 +10,13 @@ Rules:
   - Providers call tools freely from ENGINE/tools/
   - If a provider breaks, only that provider is affected
 
-Headers contract (referer / origin / user_agent):
-  - A provider sets these on Stream / DownloadItem ONLY when the CDN/server
-    requires them for the playback or download URL.
-  - Pass None (the default) if the URL works without that header.
-  - The manager passes them through to the API as-is.
-  - The app applies them when building the HTTP request; it ignores None values.
+Playback headers contract (playback_headers):
+  - A provider sets playback_headers on Stream / DownloadItem / Subtitle / Short
+    ONLY when the CDN/server requires specific headers for the URL to work.
+  - Pass an empty dict (the default) if the URL works without any extra headers.
+  - Include ANY headers the CDN needs: Referer, Origin, Authorization, X-Token, etc.
+  - The manager passes the dict to the API as-is.
+  - The app merges these headers into every HTTP request for that URL.
 """
 from __future__ import annotations
 
@@ -40,11 +41,10 @@ class Stream:
     expires_at_ms: Optional[int] = None
 
     # ── Playback headers — set ONLY when the CDN/server requires them ─────────
-    # Pass None (default) if the URL works without that header.
-    # The app skips any header that is None.
-    referer:    Optional[str] = None
-    origin:     Optional[str] = None
-    user_agent: Optional[str] = None
+    # Include any headers the CDN needs: Referer, Origin, Authorization, X-Token, etc.
+    # Leave empty ({}) if the URL works without extra headers.
+    # The manager passes this dict to the API; the app applies all entries.
+    playback_headers: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -63,10 +63,9 @@ class DownloadItem:
     # For MP4: direct download URL.
 
     # ── Download headers — set ONLY when the CDN/server requires them ─────────
-    # Pass None (default) if the URL works without that header.
-    referer:    Optional[str] = None
-    origin:     Optional[str] = None
-    user_agent: Optional[str] = None
+    # Include any headers the CDN needs: Referer, Origin, Authorization, X-Token, etc.
+    # Leave empty ({}) if the URL works without extra headers.
+    playback_headers: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -77,9 +76,8 @@ class Subtitle:
     format: str = "srt"
 
     # ── Subtitle fetch headers — set ONLY when required ───────────────────────
-    referer:    Optional[str] = None
-    origin:     Optional[str] = None
-    user_agent: Optional[str] = None
+    # Include any headers the CDN needs. Leave empty ({}) if none are required.
+    playback_headers: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -89,9 +87,8 @@ class Short:
     thumbnail: Optional[str] = None
 
     # ── Short playback headers — set ONLY when required ───────────────────────
-    referer:    Optional[str] = None
-    origin:     Optional[str] = None
-    user_agent: Optional[str] = None
+    # Include any headers the CDN needs. Leave empty ({}) if none are required.
+    playback_headers: dict = field(default_factory=dict)
 
 
 @dataclass

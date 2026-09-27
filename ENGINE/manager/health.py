@@ -339,6 +339,13 @@ class HealthTracker:
                 stat_fields = {k: v for k, v in d.items()
                                if k in _Stat.__dataclass_fields__ and k != "events"}
                 self._stats[pid] = _Stat(**stat_fields)
+                # Reset circuit_until values from old monotonic-epoch saves.
+                # Valid wall-clock values are always > (now - 1 h); anything
+                # smaller is a stale monotonic offset from a previous process.
+                s = self._stats[pid]
+                if s.circuit_until > 0 and s.circuit_until < (time.time() - 3600):
+                    s.circuit_until = 0.0
+                    s.consecutive_failures = 0
                 # Rebuild event deque
                 dq: deque[_Event] = deque(maxlen=MAX_EVENTS)
                 for ev in d.get("events", []):
@@ -411,7 +418,7 @@ class HealthTracker:
                 s.failure += 1
                 s.consecutive_failures += 1
                 if s.consecutive_failures >= _s.cb_fail_threshold:
-                    s.circuit_until = time.monotonic() + _s.cb_cooldown_seconds
+                    s.circuit_until = time.time() + _s.cb_cooldown_seconds
             else:
                 s.empty += 1
                 s.consecutive_failures = 0
@@ -438,7 +445,7 @@ class HealthTracker:
             s = self._stats.get(pid)
             if not s or s.circuit_until == 0.0:
                 return True
-            now = time.monotonic()
+            now = time.time()
             if now < s.circuit_until:
                 return False
             # half-open probe
@@ -464,7 +471,7 @@ class HealthTracker:
                 "explanation": "No data yet",
             }
 
-        circuit_broken = s.circuit_until > time.monotonic()
+        circuit_broken = s.circuit_until > time.time()
         total = s.success + s.failure
         events_1h  = _window(evq, WIN_1H)
         events_24h = _window(evq, WIN_24H)
@@ -514,7 +521,7 @@ class HealthTracker:
                 "anomalies": [],
             }
 
-        circuit_broken = s.circuit_until > time.monotonic()
+        circuit_broken = s.circuit_until > time.time()
         events_1h  = _window(evq, WIN_1H)
         events_24h = _window(evq, WIN_24H)
         events_7d  = _window(evq, WIN_7D)
@@ -652,7 +659,7 @@ async def is_circuit_open(pid: str) -> bool:
     s = _tracker._stats.get(pid)
     if not s:
         return False
-    return s.circuit_until > time.monotonic()
+    return s.circuit_until > time.time()
 
 
 # Expose raw stats dict for admin analytics (read-only — admin never writes here)

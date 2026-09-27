@@ -77,9 +77,7 @@ class R004Provider(Provider):
                     type="m3u8" if ".m3u8" in src_url else "mp4",
                     server=f"R-004 HexaSU {name}",
                     headers={"Referer": "https://hexa.su/"},
-                    referer=f"https://hexa.su/",
-                    origin="https://hexa.su",
-                    user_agent=None,
+                    playback_headers={"Referer": f"https://hexa.su/", "Origin": "https://hexa.su"},
                 ))
         except Exception:
             pass

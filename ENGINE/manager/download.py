@@ -65,12 +65,10 @@ async def _collect_from_download_providers(data: LinkData) -> list[dict]:
                 "url":           item.url,
                 "language":      item.language,
                 "size_bytes":    item.size_bytes,
-                "headers":       item.headers,
-                "expires_at_ms": item.expires_at_ms,
-                # Download headers — None means the app should omit that header.
-                "referer":       item.referer,
-                "origin":        item.origin,
-                "user_agent":    item.user_agent,
+                "headers":         item.headers,
+                "expires_at_ms":   item.expires_at_ms,
+                # Download headers — whatever the provider says the CDN needs.
+                "playback_headers": item.playback_headers,
             })
         outcome = "found" if local else "failed" if isinstance(result, TimedOut) else "empty"
         await record(p.id, outcome, ms)
@@ -114,11 +112,9 @@ async def _collect_from_stream_providers(data: LinkData) -> list[dict]:
                     "url":           s.url,
                     "language":      "English",
                     "size_bytes":    0,
-                    "headers":       s.headers,
-                    "expires_at_ms": s.expires_at_ms,
-                    "referer":       s.referer,
-                    "origin":        s.origin,
-                    "user_agent":    s.user_agent,
+                    "headers":          s.headers,
+                    "expires_at_ms":    s.expires_at_ms,
+                    "playback_headers":  s.playback_headers,
                 })
             elif s.type in ("m3u8", "hls"):
                 variants = await resolve_master(s.url, headers=s.headers)
@@ -131,11 +127,9 @@ async def _collect_from_stream_providers(data: LinkData) -> list[dict]:
                         "url":           v["url"],
                         "language":      "English",
                         "size_bytes":    0,
-                        "headers":       s.headers,
-                        "expires_at_ms": s.expires_at_ms,
-                        "referer":       s.referer,
-                        "origin":        s.origin,
-                        "user_agent":    s.user_agent,
+                        "headers":          s.headers,
+                        "expires_at_ms":    s.expires_at_ms,
+                        "playback_headers":  s.playback_headers,
                     })
         outcome = "found" if local else "failed" if isinstance(result, TimedOut) else "empty"
         await record(p.id, outcome, ms)

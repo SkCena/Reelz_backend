@@ -76,8 +76,7 @@ class R103Provider(Provider):
                     quality=v["quality"],
                     language="English",
                     headers=headers,
-                    referer=f"{_API}/",
-                    origin=_API,
+                    playback_headers={"Referer": f"{_API}/", "Origin": _API},
                 ))
         except Exception:
             pass

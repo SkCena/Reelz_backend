@@ -1,13 +1,21 @@
 """
-ENGINE/providers/Stream/R_031/R_031.py — VidSrcXYZ
+ENGINE/providers/Stream/R-031/R-031.py — VidSrcXYZ
 
 Type: m3u8
 Flow:
   1. GET vidsrc-embed.su/embed/movie?imdb=<id>  or /embed/tv?imdb=<id>&season=&episode=
   2. Scrape <iframe src> from embed page
-  3. Scrape `src: '...'` from iframe body → prorcpUrl
-  4. GET prorcpUrl → id/content → decrypt with one of 11 keyed methods
+  3. GET iframe URL (Referer = iframe URL itself) -> scrape `src: '...'` -> prorcpUrl
+  4. GET prorcpUrl (Referer = iframe URL) -> decrypt with one of 11 keyed methods
   5. Resolve {v1}..{v4} domain placeholders in final URLs
+
+Headers required:
+  - Step 1 GET:  User-Agent only
+  - Step 2 GET:  Referer: <iframe_url>   (required — server 403s without it)
+  - Step 3 GET:  Referer: <iframe_url>   (procp endpoint validates iframe referer)
+  - Playback:    Referer: <base_of_prorcpUrl>
+
+Ported from Streamplay's VidSrcXyzProvider.
 """
 from __future__ import annotations
 
@@ -132,7 +140,7 @@ def _method_playerjs(x: str) -> str:
         return ""
 
 
-_DECRYPT_METHODS: dict[str, any] = {
+_DECRYPT_METHODS: dict = {
     "TsA2KGDGux": _method_TsA2KGDGux,
     "ux8qjPHC66": _method_ux8qjPHC66,
     "xTyBxQyGTA": _method_xTyBxQyGTA,
@@ -158,9 +166,9 @@ class R031Provider(Provider):
             return result
         try:
             client = await get_client()
-            headers = {"User-Agent": UA}
+            ua_headers = {"User-Agent": UA}
 
-            # Step 1: embed page → iframe src
+            # Step 1: embed page -> iframe src
             if data.season is None:
                 embed_url = f"{_BASE}/embed/movie?imdb={imdb_id}"
             else:
@@ -169,7 +177,7 @@ class R031Provider(Provider):
                     f"&season={data.season}&episode={data.episode}"
                 )
 
-            r1 = await client.get(embed_url, headers=headers, timeout=15)
+            r1 = await client.get(embed_url, headers=ua_headers, timeout=15)
             soup1 = parse(r1.text)
             tag = soup1.find("iframe")
             iframe_url: str = tag.get("src", "") if tag else ""
@@ -178,16 +186,26 @@ class R031Provider(Provider):
             if not iframe_url.startswith("http"):
                 return result
 
-            # Step 2: iframe → prorcpUrl
-            r2 = await client.get(iframe_url, headers={**headers, "Referer": iframe_url}, timeout=15)
+            # Step 2: iframe -> prorcpUrl
+            # Referer must be the iframe URL itself — server returns 403 without it
+            r2 = await client.get(
+                iframe_url,
+                headers={**ua_headers, "Referer": iframe_url},
+                timeout=15,
+            )
             src_m = re.search(r"src:\s+'(.*?)'", r2.text)
             if not src_m:
                 return result
             base_m = re.match(r"(https?://[^/]+)", iframe_url)
             procp_url = (base_m.group(1) if base_m else "") + src_m.group(1)
 
-            # Step 3: procp page → decrypt
-            r3 = await client.get(procp_url, headers={**headers, "Referer": iframe_url}, timeout=15)
+            # Step 3: procp page -> decrypt
+            # Referer = iframe_url (procp validates that the procp was reached from the iframe)
+            r3 = await client.get(
+                procp_url,
+                headers={**ua_headers, "Referer": iframe_url},
+                timeout=15,
+            )
             html3 = r3.text
 
             method_id: str | None = None
@@ -228,10 +246,8 @@ class R031Provider(Provider):
                 raw_url = part.strip()
                 if not raw_url.startswith("http"):
                     continue
-                # Extract version label before replacing placeholder
                 ver_m = re.search(r"\{(v\d+)\}", raw_url)
                 ver_str = ver_m.group(1) if ver_m else ""
-                # Substitute all placeholders
                 for ver, domain in _VSUBS.items():
                     raw_url = raw_url.replace("{" + ver + "}", domain)
 
@@ -243,7 +259,7 @@ class R031Provider(Provider):
                     type="m3u8" if ".m3u8" in raw_url else "mp4",
                     server=f"R-031 {label}",
                     headers={"Referer": referer},
-                    referer=referer,
+                    playback_headers={"Referer": referer},
                 ))
 
         except Exception:

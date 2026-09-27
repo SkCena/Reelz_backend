@@ -106,7 +106,7 @@ class R027Provider(Provider):
                                 type="m3u8" if ".m3u8" in url else "mp4",
                                 server="R-027 CineMacity",
                                 quality=f.get("title") if isinstance(f, dict) else None,
-                                referer=f"{_API}/",
+                                playback_headers={"Referer": f"{_API}/"},
                             ))
 
             # Subtitles: "[EN]https://...vtt,[RU]https://..."

@@ -56,15 +56,13 @@ async def get_shorts(*, tmdb_id: int, media_type: str, page: int = 1, fresh: boo
             if not s.url:
                 continue
             local.append({
-                "provider":    p.name,
-                "provider_id": p.id,
-                "title":       s.title,
-                "url":         s.url,
-                "thumbnail":   s.thumbnail,
-                # Playback headers — None means not required by this provider.
-                "referer":     getattr(s, "referer", None),
-                "origin":      getattr(s, "origin", None),
-                "user_agent":  getattr(s, "user_agent", None),
+                "provider":         p.name,
+                "provider_id":      p.id,
+                "title":            s.title,
+                "url":              s.url,
+                "thumbnail":        s.thumbnail,
+                # Playback headers — whatever the provider says the CDN needs.
+                "playback_headers":  s.playback_headers,
             })
         outcome = "found" if local else "failed" if isinstance(result, TimedOut) else "empty"
         await record(p.id, outcome, ms)
