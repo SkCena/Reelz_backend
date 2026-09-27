@@ -98,6 +98,7 @@ class Result:
     downloads: list[DownloadItem] = field(default_factory=list)
     subtitles: list[Subtitle] = field(default_factory=list)
     shorts: list[Short] = field(default_factory=list)
+    http_status: int = 0   # last HTTP status code seen; 0 = unknown/timeout
 
 
 # ── What managers pass to providers ──────────────────────────────────────────
