@@ -39,25 +39,12 @@ async def get_config(response: Response):
                 "payment_note":         _s.premium_payment_note,
             },
             "ads": {
-                "enabled":          _s.ads_enabled,
-                "applovin_sdk_key": _s.applovin_sdk_key,
-                "banner_id":        _s.ads_banner_id,
-                "interstitial_id":  _s.ads_interstitial_id,
-                "rewarded_id":      _s.ads_rewarded_id,
-                "native_id":        _s.ads_native_id,
-                "placements": {
-    "banner_enabled":       True,
-    "interstitial_enabled": True,
-    "native_enabled":       True,
-    "rewarded_enabled":     True, 
-    "preroll_enabled":      False,
-},
-                "frequency": {
-                    "content_opens_before_first": 3,
-                    "every_n_plays":              3,
-                    "min_ms_between":             60_000,
-                    "max_per_session":            10,
-                },
+                # Master switch — set ADS_ENABLED=true in .env to serve ads.
+                # All SDK keys, ad unit IDs, and frequency settings live in the app.
+                "enabled":       _s.ads_enabled,
+                "interstitial":  _s.ads_interstitial,
+                "banner":        _s.ads_banner,
+                "native":        _s.ads_native,
             },
         },
         cache_ttl_ms=_TTL,
