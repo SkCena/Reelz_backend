@@ -126,13 +126,12 @@ class Settings(BaseSettings):
     # Optional note shown below subscribe buttons (e.g. "Cancel anytime").
     premium_payment_note: str = ""
 
-    # Ads config
+    # Ads config — Start.io
+    # Only 4 toggles. All SDK keys, ad unit IDs, and frequency logic live in the app.
     ads_enabled: bool = False
-    applovin_sdk_key: str = ""
-    ads_banner_id: str = ""
-    ads_interstitial_id: str = ""
-    ads_rewarded_id: str = ""
-    ads_native_id: str = ""
+    ads_interstitial: bool = True   # show interstitial ads when ads_enabled=true
+    ads_banner: bool = True         # show banner ads when ads_enabled=true
+    ads_native: bool = True         # show native ads when ads_enabled=true
 
 
 @lru_cache
