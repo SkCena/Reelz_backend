@@ -27,6 +27,12 @@ from ENGINE.tools.http import get_client
 NETMIRROR_BASE = "https://net27.cc"
 NETMIRROR_REFERER = "https://net27.cc/"
 
+# Fallback domains (NetMirror rotates; CNCVerse uses net52.cc)
+NETMIRROR_FALLBACKS = [
+    "https://net52.cc",
+    "https://net51.cc",
+]
+
 # Dub languages to include (keep the list focused)
 WANTED_DUBS = {"hindi dub", "english dub", "tamil dub", "telugu dub"}
 
@@ -35,15 +41,23 @@ SKIP_SUFFIX = " sub"
 
 
 async def _fetch_json(client, url: str, timeout: int = 12):
-    """Fetch JSON from NetMirror API. Returns dict or None."""
-    try:
-        r = await client.get(
-            url,
-            headers={"Referer": NETMIRROR_REFERER},
-            timeout=timeout,
-        )
-        if r.status_code == 200:
-            return r.json()
+    """Fetch JSON from NetMirror API. Tries fallback domains. Returns dict or None."""
+    urls = [url]
+    # Add fallback domain variants
+    for fb in NETMIRROR_FALLBACKS:
+        if NETMIRROR_BASE in url:
+            urls.append(url.replace(NETMIRROR_BASE, fb))
+    for u in urls:
+        try:
+            r = await client.get(
+                u,
+                headers={"Referer": NETMIRROR_REFERER},
+                timeout=timeout,
+            )
+            if r.status_code == 200:
+                return r.json()
+        except Exception:
+            continue
     except Exception:
         pass
     return None
