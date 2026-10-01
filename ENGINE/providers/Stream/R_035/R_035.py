@@ -58,8 +58,6 @@ async def _fetch_json(client, url: str, timeout: int = 12):
                 return r.json()
         except Exception:
             continue
-    except Exception:
-        pass
     return None
 
 
