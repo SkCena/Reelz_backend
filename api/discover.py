@@ -32,11 +32,12 @@ async def discover(
     sort: str = Query("popularity"),
     cursor: Optional[str] = Query(None),
     limit: int = Query(20, ge=1, le=50),
+    language: Optional[str] = Query(None),
     user_id: Optional[str] = Depends(verify),
 ):
     from CATALOG.tmdb import discover as tmdb_discover, normalise_card
     page = _decode_page(cursor)
-    raw  = await tmdb_discover(media_type=type, genre_id=genre, sort_by=sort, page=page)
+    raw  = await tmdb_discover(media_type=type, genre_id=genre, sort_by=sort, page=page, language=language)
     results  = raw.get("results", [])
     items    = [normalise_card(r, type) for r in results[:limit]]
     has_more = page < raw.get("total_pages", 1)

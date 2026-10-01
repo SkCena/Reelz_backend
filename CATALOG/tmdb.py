@@ -122,6 +122,7 @@ async def discover(
     genre_id: Optional[str] = None,
     sort_by: str = "popularity",
     page: int = 1,
+    language: Optional[str] = None,
     **_kwargs,
 ) -> dict:
     mtype     = "movie" if media_type == "movie" else "tv"
@@ -134,8 +135,10 @@ async def discover(
     }
     if genre_id:
         params["with_genres"] = genre_id
+    if language:
+        params["with_original_language"] = language
 
-    cache_key = f"tmdb:discover:{mtype}:{sort_by}:{genre_id}:{page}"
+    cache_key = f"tmdb:discover:{mtype}:{sort_by}:{genre_id}:{page}:{language}"
     cached    = await cache_get(cache_key)
     if cached:
         return cached
