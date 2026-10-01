@@ -113,8 +113,8 @@ async def resolve_stream(
             continue
         # Don't guess language: if provider didn't set it, label by quality
         # instead of wrongly claiming "English" for Hindi audio.
-        lang = s.get("language", "").strip()
-        quality = s.get("quality", "").strip()
+        lang = (s.get("language") or "").strip()
+        quality = (s.get("quality") or "").strip()
         if lang and lang.lower() not in ("unknown", "und"):
             name = lang
         elif quality:
