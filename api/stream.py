@@ -111,9 +111,22 @@ async def resolve_stream(
         url = s.get("url", "")
         if not url:
             continue
-        name = s.get("language") or s.get("quality") or "English"
+        # Don't guess language: if provider didn't set it, label by quality
+        # instead of wrongly claiming "English" for Hindi audio.
+        lang = s.get("language", "").strip()
+        quality = s.get("quality", "").strip()
+        if lang and lang.lower() not in ("unknown", "und"):
+            name = lang
+        elif quality:
+            name = quality
+        else:
+            name = "Stream"
         if name in seen:
-            continue
+            # Make duplicate names unique with quality suffix
+            if quality and quality not in name:
+                name = f"{name} {quality}"
+            if name in seen:
+                continue
         seen.add(name)
         streams.append({
             "name":      name,
@@ -124,8 +137,11 @@ async def resolve_stream(
         })
 
     if not streams and best:
+        _blang = (best.get("language") or "").strip()
+        _bqual = (best.get("quality") or "").strip()
+        _bname = _blang if _blang and _blang.lower() not in ("unknown", "und") else (_bqual or "Stream")
         streams = [{
-            "name":      best.get("language") or "English",
+            "name":      _bname,
             "url":       best.get("url", ""),
             "type":      "hls" if best.get("type") in ("m3u8", "hls") else "mp4",
             "headers":   _merge_headers(best.get("headers"), best.get("referer"), best.get("origin"), best.get("user_agent")),

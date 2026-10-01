@@ -55,7 +55,7 @@ class DownloadItem:
     headers: dict = field(default_factory=dict)
     size_label: Optional[str] = None
     size_bytes: int = 0
-    language: str = "English"
+    language: str = ""
     # Optional: set this if the provider knows when the URL expires.
     expires_at_ms: Optional[int] = None
     # For HLS: this should be the quality-specific index.m3u8 URL
