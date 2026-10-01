@@ -30,15 +30,18 @@ from typing import Optional
 from ENGINE.tools.http import get_client, UA
 
 # Default known domains per provider (kept as fallback)
+# Updated 2026-10-01 from SaurabhKaperwan/Utils urls.json
 _DEFAULTS: dict[str, list[str]] = {
-    "vegamovies":   ["https://vegamovies.dad", "https://vegamovies.skin"],
-    "hdhub4u":      ["https://hdhub4u.hair", "https://hdhub4u.gives"],
-    "rogmovies":    ["https://rogmovies.dad", "https://rogmovies.skin"],
-    "multimovies":  ["https://multimovies.live", "https://multimovies.cloud"],
-    "uhdmovies":    ["https://uhdmovies.online", "https://uhdmovies.mom"],
-    "moviesmod":    ["https://moviesmod.skin", "https://moviesmod.dad"],
+    "vegamovies":   ["https://vegamovies.gallery", "https://vegamovies.dad", "https://vegamovies.skin"],
+    "hdhub4u":      ["https://new1.hdhub4u.free", "https://hdhub4u.hair", "https://hdhub4u.gives"],
+    "rogmovies":    ["https://rogmovies.best", "https://rogmovies.dad", "https://rogmovies.skin"],
+    "multimovies":  ["https://multimovies.casa", "https://multimovies.live", "https://multimovies.cloud"],
+    "uhdmovies":    ["https://uhdmovies.my", "https://uhdmovies.online", "https://uhdmovies.mom"],
+    "moviesmod":    ["https://moviesmod.ai.in", "https://moviesmod.skin", "https://moviesmod.dad"],
     "movies4u":     ["https://movies4u.homes", "https://movies4u.art"],
-    "n4khdhub":     ["https://4kmovieshub.in", "https://4khdhub.com"],
+    "n4khdhub":     ["https://4khdhub.one", "https://4kmovieshub.in", "https://4khdhub.com"],
+    "bollyflix":    ["https://new.bollyflix.vote"],
+    "moviesdrive":  ["https://new5.moviesdrive.christmas"],
 }
 
 _ENV_MAP: dict[str, str] = {
@@ -50,6 +53,8 @@ _ENV_MAP: dict[str, str] = {
     "moviesmod":    "DOMAIN_MOVIESMOD",
     "movies4u":     "DOMAIN_MOVIES4U",
     "n4khdhub":     "DOMAIN_4KHDHUB",
+    "bollyflix":    "DOMAIN_BOLLYFLIX",
+    "moviesdrive":  "DOMAIN_MOVIESDRIVE",
 }
 
 # Cache of verified domains

@@ -53,6 +53,10 @@ from ENGINE.providers.Stream.R_028.R_028 import R028Provider   # VidEasy
 from ENGINE.providers.Stream.R_029.R_029 import R029Provider   # VidZee
 from ENGINE.providers.Stream.R_030.R_030 import R030Provider   # Peachify
 from ENGINE.providers.Stream.R_031.R_031 import R031Provider   # VidSrcXYZ
+from ENGINE.providers.Stream.R_032.R_032 import R032Provider   # MovieBox
+from ENGINE.providers.Stream.R_033.R_033 import R033Provider   # VixSrc
+from ENGINE.providers.Stream.R_034.R_034 import R034Provider   # 4KHDHub Hindi
+from ENGINE.providers.Stream.R_035.R_035 import R035Provider   # NetMirror OTT
 
 # ── ACTIVE — priority order (fastest/most reliable first) ────────────────────
 #
@@ -75,6 +79,10 @@ ACTIVE: list[Provider] = [
     R007Provider(),   # VaplayerV2    — iframe / direct
     R010Provider(),   # PrimeVids     — direct
     R031Provider(),   # VidSrcXYZ     — 3-step decrypt chain (medium speed)
+    R033Provider(),   # VixSrc        — API + signed HLS, fast
+    R034Provider(),   # 4KHDHub Hindi — Indian site, Hindi dubbed/dual audio
+    R035Provider(),   # NetMirror OTT — Netflix/Prime/Hotstar, Hindi dub fan-out
+    R032Provider(),   # MovieBox      — h5-api search/download/play (slow)
     R005Provider(),   # AllMovieLand  — scraper
     R008Provider(),   # DahmerMovies  — scraper
     R011Provider(),   # KissKh        — scraper (Asian content)

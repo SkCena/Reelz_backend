@@ -50,7 +50,36 @@ class R026Provider(Provider):
                 return result
 
             j = res.json()
-            playlist = (j.get("stream") or {}).get("playlist", "")
+            stream = j.get("stream") or {}
+
+            # New format: stream.qualities = {"360": {...}, "480": {...}, "720": {...}}
+            qualities = stream.get("qualities") or {}
+            if qualities:
+                for q_name, q_data in qualities.items():
+                    q_url = (q_data or {}).get("url", "")
+                    if not q_url:
+                        continue
+                    q_type = (q_data or {}).get("type", "mp4")
+                    result.streams.append(Stream(
+                        url=q_url,
+                        type="m3u8" if ".m3u8" in q_url else "mp4",
+                        server="R-026 VidLink",
+                        quality=f"{q_name}p",
+                        playback_headers={"Referer": f"{_API}/", "Origin": _API, "User-Agent": UA},
+                    ))
+                # Captions
+                for cap in stream.get("captions") or []:
+                    if cap.get("url"):
+                        from ENGINE.providers.base import Subtitle
+                        result.subtitles.append(Subtitle(
+                            url=cap["url"],
+                            language=cap.get("label", "English"),
+                        ))
+                if result.streams:
+                    return result
+
+            # Old format: stream.playlist (m3u8 URL with optional embedded headers)
+            playlist = stream.get("playlist", "")
             if not playlist:
                 return result
 
