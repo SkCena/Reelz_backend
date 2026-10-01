@@ -97,9 +97,20 @@ async def get_download_links(
         raise HTTPException(status_code=403, detail="Downloads not available")
 
     tmdb_id = parse_tmdb_id(req.id)
+
+    # Enrich with IMDB ID from TMDB (for providers that need it internally)
+    imdb_id = None
+    try:
+        from CATALOG.tmdb import get_external_ids
+        ext = await get_external_ids(tmdb_id, req.type)
+        imdb_id = ext.get("imdb_id")
+    except Exception:
+        pass
+
     engine_req = EngineRequest(
         tmdb_id = tmdb_id,
         type    = req.type,
+        imdb_id = imdb_id,
         season  = req.season or None,
         episode = req.episode or None,
     )
