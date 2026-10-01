@@ -175,6 +175,14 @@ async def get_season_detail(tmdb_id: int, season_number: int) -> Optional[dict]:
     return await _cached_get(key, f"/tv/{tmdb_id}/season/{season_number}", ttl=86_400)
 
 
+async def get_external_ids(tmdb_id: int, media_type: str = "movie") -> dict:
+    """Get external IDs (IMDB, etc.) for a TMDB item. Cached for 7 days."""
+    path = f"/{'tv' if media_type == 'tv' else 'movie'}/{tmdb_id}/external_ids"
+    key = f"tmdb:external:{media_type}:{tmdb_id}"
+    result = await _cached_get(key, path, ttl=604_800)
+    return result or {}
+
+
 # ── Curated list fetchers (for feed) ─────────────────────────────────────────
 
 async def _list(path: str, page: int = 1, ttl: int = 3600) -> list[dict]:
