@@ -1,23 +1,23 @@
 """
-ENGINE/providers/Stream/R-032/R-032.py — MovieBox
+ENGINE/providers/Stream/R-032/R-032.py — MovieBox (fast API)
 
-Type: m3u8 | mp4
-Flow:
-  1. GET /wefeed-h5api-bff/app/get-latest-app-pkgs?app_name=moviebox -> x-user token from headers
-  2. POST /wefeed-h5api-bff/subject/search {keyword, page, perPage, subjectType} -> subjectId
-  3. GET /wefeed-h5-bff/web/post/list/subject?id=<subjectId> -> detailPath
-  4. GET /wefeed-h5api-bff/subject/download?subjectId=... -> downloads[]
-  5. GET /wefeed-h5api-bff/subject/play?subjectId=... -> streams[]
+Type: mp4
+Flow (simplified, from phoenix project):
+  1. POST /subject/search-suggest -> JWT token from x-user header
+  2. POST /subject/search {keyword, page, perPage, subjectType} -> subjectId
+  3. GET /subject/play?subjectId=...&se=...&ep=... -> direct MP4 streams
 
-Ported from Streamline's moviebox.js (CineStream port).
+Skips the slow get-latest-app-pkgs and post/list/subject steps.
 """
 from __future__ import annotations
+
+import json
 
 from ENGINE.providers.base import Provider, LinkData, Result, Stream, Subtitle
 from ENGINE.tools.http import get_client, UA
 
-_BASE = "https://h5-api.aoneroom.com"
-_WEB_BASE = "https://h5.aoneroom.com"
+_BASE = "https://h5-api.aoneroom.com/wefeed-h5api-bff"
+_SITE = "https://movie-box.co"
 
 
 def _unwrap(obj):
@@ -25,8 +25,6 @@ def _unwrap(obj):
         return {}
     data = obj.get("data")
     if isinstance(data, dict):
-        if isinstance(data.get("data"), dict):
-            return data["data"]
         return data
     return obj
 
@@ -51,133 +49,139 @@ class R032Provider(Provider):
             client = await get_client()
             is_tv = data.type == "tv"
 
-            # Step 1: Get x-user token
-            token = ""
+            # Step 1: Get JWT via search-suggest (fast)
+            jwt = ""
             try:
-                pkg_res = await client.get(
-                    f"{_BASE}/wefeed-h5api-bff/app/get-latest-app-pkgs?app_name=moviebox",
-                    headers={"User-Agent": UA},
+                r = await client.post(
+                    f"{_BASE}/subject/search-suggest",
+                    json={"keyword": "a", "perPage": 1},
+                    headers={
+                        "User-Agent": UA,
+                        "Content-Type": "application/json",
+                        "Accept": "application/json",
+                    },
                     timeout=15,
                 )
-                token = pkg_res.headers.get("x-user", "") or pkg_res.headers.get("X-User", "")
+                if r.status_code == 200:
+                    xuser = r.headers.get("x-user") or r.headers.get("X-User") or ""
+                    if xuser:
+                        try:
+                            jwt = json.loads(xuser).get("token", "")
+                        except Exception:
+                            pass
             except Exception:
                 pass
-
-            base_headers = {
-                "X-Client-Info": '{"timezone":"Africa/Nairobi"}',
-                "Accept-Language": "en-US,en;q=0.5",
-                "Accept": "application/json",
-                "Referer": _BASE,
-                "Host": "h5-api.aoneroom.com",
-                "Connection": "keep-alive",
-                "User-Agent": UA,
-            }
-            if token:
-                base_headers["X-User"] = token
-
-            # Step 2: Search
-            search_body = {
-                "keyword": data.title,
-                "page": 1,
-                "perPage": 24,
-                "subjectType": 2 if is_tv else 1,
-            }
-            search_res = await client.post(
-                f"{_BASE}/wefeed-h5api-bff/subject/search",
-                json=search_body,
-                headers=base_headers,
-                timeout=20,
-            )
-            if search_res.status_code >= 400:
+            if not jwt:
                 return result
 
-            search_data = _unwrap(search_res.json())
-            items = search_data.get("items") or []
-            want = _clean_title(data.title)
-            subject_id = None
-            lang = "Original"
+            headers = {
+                "User-Agent": UA,
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "Authorization": f"Bearer {jwt}",
+                "X-Client-Info": json.dumps({"timezone": "UTC"}),
+                "X-Request-Lang": "en",
+            }
 
+            # Step 2: Search
+            search_res = await client.post(
+                f"{_BASE}/subject/search",
+                json={
+                    "keyword": data.title,
+                    "page": 1,
+                    "perPage": 20,
+                    "subjectType": 2 if is_tv else 1,
+                },
+                headers=headers,
+                timeout=20,
+            )
+            if search_res.status_code != 200:
+                return result
+
+            items = _unwrap(search_res.json()).get("items") or []
+            want = _clean_title(data.title)
+            year_str = str(data.year) if data.year else ""
+
+            best = None
             for it in items:
                 t = _clean_title(it.get("title") or it.get("name"))
-                if t == want or want in t or t in want:
-                    subject_id = it.get("id") or it.get("subjectId")
-                    lang = it.get("lanName") or it.get("language") or lang
-                    break
+                if want and (t == want or want in t or t in want):
+                    # Prefer year match
+                    rd = str(it.get("releaseDate") or "")
+                    if year_str and year_str in rd:
+                        best = it
+                        break
+                    if not best:
+                        best = it
+            if not best and items:
+                best = items[0]
+            if not best:
+                return result
 
-            if not subject_id and items:
-                subject_id = items[0].get("id") or items[0].get("subjectId")
-                lang = items[0].get("lanName") or items[0].get("language") or lang
-
+            subject_id = best.get("id") or best.get("subjectId")
+            detail_path = best.get("detailPath") or ""
+            lang = best.get("lanName") or best.get("language") or ""
             if not subject_id:
                 return result
 
-            # Step 3: Get detail path
-            detail_path = ""
-            try:
-                detail_res = await client.get(
-                    f"{_WEB_BASE}/wefeed-h5-bff/web/post/list/subject?id={subject_id}",
-                    timeout=15,
-                )
-                detail_obj = detail_res.json()
-                detail_items = ((detail_obj.get("data") or {}).get("items")) or []
-                if detail_items and detail_items[0].get("subject"):
-                    detail_path = detail_items[0]["subject"].get("detailPath", "")
-            except Exception:
-                pass
+            # Step 3: Get play URLs
+            se = data.season or 0
+            ep = data.episode or 0
+            play_url = (
+                f"{_BASE}/subject/play?subjectId={subject_id}"
+                f"&se={se}&ep={ep}&detailPath={detail_path}&streamSignType=1"
+            )
+            play_headers = {
+                **headers,
+                "Referer": f"{_SITE}/movies/{detail_path}",
+            }
+            play_res = await client.get(play_url, headers=play_headers, timeout=20)
+            if play_res.status_code != 200:
+                return result
 
-            # Step 4 & 5: Collect download + play URLs
-            params = f"subjectId={subject_id}"
-            if is_tv and data.season and data.episode:
-                params += f"&se={data.season}&ep={data.episode}"
-            if detail_path:
-                from urllib.parse import quote
-                params += f"&detailPath={quote(detail_path)}"
-
-            referer = f"https://fmoviesunblocked.net/spa/videoPlayPage/movies/{detail_path}?id={subject_id}&type=/movie/detail"
-            req_headers = {**base_headers, "Referer": referer, "Origin": "https://fmoviesunblocked.net"}
-            play_headers = {"Referer": referer, "Origin": "https://fmoviesunblocked.net", "User-Agent": UA}
-
+            play_data = _unwrap(play_res.json())
+            streams = play_data.get("streams") or []
             seen = set()
 
-            async def collect(endpoint):
-                try:
-                    res = await client.get(f"{_BASE}{endpoint}{params}", headers=req_headers, timeout=20)
-                    if res.status_code >= 400:
-                        return
-                    d = _unwrap(res.json())
-                    for item in (d.get("downloads") or d.get("streams") or []):
-                        if not item or not item.get("url") or item.get("vipLocked"):
-                            continue
-                        res_name = item.get("resolution") or item.get("resolutions") or "Auto"
-                        if res_name in seen:
-                            continue
-                        seen.add(res_name)
-                        url = item["url"]
-                        result.streams.append(Stream(
-                            url=url,
-                            type="m3u8" if ".m3u8" in url else "mp4",
-                            server=f"R-032 MovieBox [{lang}]",
-                            quality=res_name,
-                            playback_headers=play_headers,
-                        ))
-                    # Captions
-                    for cap in (d.get("captions") or []):
-                        if not cap or not cap.get("url"):
-                            continue
-                        sub = Subtitle(
-                            url=cap["url"],
-                            language=cap.get("lan") or cap.get("lanName") or "en",
-                        )
-                        for s in result.streams:
-                            if not hasattr(s, 'subtitles') or s.subtitles is None:
-                                s.subtitles = []
-                            if len(s.subtitles) < 8:
-                                s.subtitles.append(sub)
-                except Exception:
-                    pass
+            for s in streams:
+                url = s.get("url") or ""
+                if not url or s.get("vipLocked"):
+                    continue
+                if url in seen:
+                    continue
+                seen.add(url)
 
-            await collect("/wefeed-h5api-bff/subject/download?")
-            await collect("/wefeed-h5api-bff/subject/play?")
+                res_name = str(s.get("resolutions") or s.get("resolution") or "")
+                if res_name and not res_name.endswith("p"):
+                    res_name = f"{res_name}p"
+
+                # hakunaymatata CDN needs Referer
+                stream_headers = None
+                if "hakunaymatata.com" in url:
+                    stream_headers = {"Referer": "https://movie-box.co/"}
+
+                result.streams.append(Stream(
+                    url=url,
+                    type="m3u8" if ".m3u8" in url else "mp4",
+                    language=lang or "",
+                    quality=res_name or "",
+                    headers=stream_headers or {},
+                ))
+
+            # Captions
+            for cap in (play_data.get("captions") or []):
+                curl = cap.get("url") or ""
+                if not curl:
+                    continue
+                sub = Subtitle(
+                    url=curl,
+                    language=cap.get("lan") or cap.get("lanName") or "English",
+                )
+                for st in result.streams:
+                    if not getattr(st, "subtitles", None):
+                        st.subtitles = []
+                    if len(st.subtitles) < 8:
+                        st.subtitles.append(sub)
 
         except Exception:
             pass
