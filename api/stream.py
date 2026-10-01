@@ -90,9 +90,21 @@ async def resolve_stream(
     user_id: Optional[str] = Depends(verify),
 ):
     tmdb_id = parse_tmdb_id(req.id)
+
+    # Enrich with IMDB ID from TMDB (for providers that need it internally).
+    # System stays TMDB-based; this is just a lookup to help IMDB-dependent providers.
+    imdb_id = None
+    try:
+        from CATALOG.tmdb import get_external_ids
+        ext = await get_external_ids(tmdb_id, req.type)
+        imdb_id = ext.get("imdb_id")
+    except Exception:
+        pass
+
     engine_req = EngineRequest(
         tmdb_id = tmdb_id,
         type    = req.type,
+        imdb_id = imdb_id,
         season  = req.season or None,
         episode = req.episode or None,
     )
