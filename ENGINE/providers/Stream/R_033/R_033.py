@@ -29,9 +29,9 @@ class R033Provider(Provider):
             is_tv = data.type == "tv"
 
             if is_tv and data.season and data.episode:
-                api_url = f"https://vixsrc.to/api/tv/{data.tmdb_id}/{data.season}/{data.episode}"
+                api_url = f"https://vixsrc.to/api/tv/{data.tmdb_id}/{data.season}/{data.episode}?lang=hi"
             else:
-                api_url = f"https://vixsrc.to/api/movie/{data.tmdb_id}"
+                api_url = f"https://vixsrc.to/api/movie/{data.tmdb_id}?lang=hi"
 
             r = await client.get(
                 api_url,
