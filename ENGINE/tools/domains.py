@@ -32,9 +32,9 @@ from ENGINE.tools.http import get_client, UA
 # Default known domains per provider (kept as fallback)
 # Updated 2026-10-01 from SaurabhKaperwan/Utils urls.json
 _DEFAULTS: dict[str, list[str]] = {
-    "vegamovies":   ["https://vegamovies.gallery", "https://vegamovies.dad", "https://vegamovies.skin"],
+    "vegamovies":   ["https://new2.vegamovies.futbol", "https://vegamovies.gallery", "https://vegamovies.dad", "https://vegamovies.skin"],
     "hdhub4u":      ["https://new1.hdhub4u.free", "https://hdhub4u.hair", "https://hdhub4u.gives"],
-    "rogmovies":    ["https://rogmovies.best", "https://rogmovies.dad", "https://rogmovies.skin"],
+    "rogmovies":    ["https://new2.rogmovies.click", "https://rogmovies.best", "https://rogmovies.dad", "https://rogmovies.skin"],
     "multimovies":  ["https://multimovies.casa", "https://multimovies.live", "https://multimovies.cloud"],
     "uhdmovies":    ["https://uhdmovies.my", "https://uhdmovies.online", "https://uhdmovies.mom"],
     "moviesmod":    ["https://moviesmod.ai.in", "https://moviesmod.skin", "https://moviesmod.dad"],
