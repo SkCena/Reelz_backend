@@ -43,8 +43,7 @@ class R018Provider(Provider):
             api = await get_domain("vegamovies")
             if not api:
                 return result
-            if not data.imdb_id:
-                return result
+            # Try IMDB ID first, fall back to title search (don't require imdb_id)
 
             # 1) Search
             async def fetch_docs(query: str) -> list[dict]:
@@ -57,8 +56,11 @@ class R018Provider(Provider):
                 except Exception:
                     return []
 
-            docs = await fetch_docs(data.imdb_id)
-            match = next((d for d in docs if (d.get("imdb_id") or "").lower() == data.imdb_id.lower()), None)
+            docs = []
+            match = None
+            if data.imdb_id:
+                docs = await fetch_docs(data.imdb_id)
+                match = next((d for d in docs if (d.get("imdb_id") or "").lower() == data.imdb_id.lower()), None)
             if not match and data.title:
                 docs = await fetch_docs(data.title)
                 tl = data.title.lower()
