@@ -147,6 +147,7 @@ async def resolve_stream(
             "url":       url,
             "type":      "hls" if s.get("type") in ("m3u8", "hls") else "mp4",
             "headers":   _merge_headers(s.get("headers"), s.get("referer"), s.get("origin"), s.get("user_agent")),
+            "playback_headers": s.get("playback_headers", {}),
             "subtitles": [],
         })
 
