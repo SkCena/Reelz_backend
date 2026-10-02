@@ -123,6 +123,11 @@ async def resolve_stream(
         url = s.get("url", "")
         if not url:
             continue
+        # Skip embed/iframe pages — they're HTML, not playable video.
+        # These cause "playback source error" in the app.
+        url_lower = url.lower()
+        if "/embed/" in url_lower or "/e/" in url_lower.split("?")[0][-3:]:
+            continue
         # Don't guess language: if provider didn't set it, label by quality
         # instead of wrongly claiming "English" for Hindi audio.
         lang = (s.get("language") or "").strip()
