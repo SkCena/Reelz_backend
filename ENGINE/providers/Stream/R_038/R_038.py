@@ -262,42 +262,51 @@ class R038Provider(Provider):
 
     async def _h5_token(self) -> str:
         try:
-            client = await get_client()
-            r = await client.post(
-                f"{_H5_BASE}/subject/search-suggest",
-                json={"keyword": "a", "perPage": 1},
-                headers=_h5_headers(),
+            # Use HTTP/1.1 explicitly — some CDN edges (aoneroom) reset
+            # HTTP/2 connections from certain datacenter IPs (e.g. Render).
+            import httpx
+            async with httpx.AsyncClient(
+                http2=False,
+                follow_redirects=True,
                 timeout=15,
-            )
-            if r.status_code == 200:
-                xuser = r.headers.get("x-user") or ""
-                if xuser:
-                    try:
-                        return json.loads(xuser).get("token", "")
-                    except Exception:
-                        pass
+                headers={"User-Agent": _h5_headers()["User-Agent"]},
+            ) as client:
+                r = await client.post(
+                    f"{_H5_BASE}/subject/search-suggest",
+                    json={"keyword": "a", "perPage": 1},
+                    headers=_h5_headers(),
+                    timeout=15,
+                )
+                if r.status_code == 200:
+                    xuser = r.headers.get("x-user") or ""
+                    if xuser:
+                        try:
+                            return json.loads(xuser).get("token", "")
+                        except Exception:
+                            pass
         except Exception:
             pass
         return ""
 
     async def _h5_search(self, title: str, is_tv: bool) -> list[dict]:
         try:
-            client = await get_client()
+            import httpx
             jwt = await self._h5_token()
             headers = _h5_headers()
             if jwt:
                 headers["Authorization"] = f"Bearer {jwt}"
-            r = await client.post(
-                f"{_H5_BASE}/subject/search",
-                json={"keyword": title, "page": 1, "perPage": 20,
-                      "subjectType": 2 if is_tv else 1},
-                headers=headers,
-                timeout=20,
-            )
-            if r.status_code != 200:
-                return []
-            data = r.json().get("data") or {}
-            return data.get("items") or []
+            async with httpx.AsyncClient(http2=False, follow_redirects=True, timeout=20) as client:
+                r = await client.post(
+                    f"{_H5_BASE}/subject/search",
+                    json={"keyword": title, "page": 1, "perPage": 20,
+                          "subjectType": 2 if is_tv else 1},
+                    headers=headers,
+                    timeout=20,
+                )
+                if r.status_code != 200:
+                    return []
+                data = r.json().get("data") or {}
+                return data.get("items") or []
         except Exception:
             return []
 
