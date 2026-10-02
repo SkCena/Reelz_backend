@@ -60,7 +60,6 @@ from ENGINE.providers.Stream.R_035.R_035 import R035Provider   # NetMirror OTT
 from ENGINE.providers.Stream.R_036.R_036 import R036Provider   # Bollyflix (Hindi)
 from ENGINE.providers.Stream.R_037.R_037 import R037Provider   # VidZee (Hindi dub)
 from ENGINE.providers.Stream.R_038.R_038 import R038Provider   # MovieBox IN
-from ENGINE.providers.Stream.R_039.R_039 import R039Provider   # Vidzee Hindi
 
 # ── ACTIVE — priority order (fastest/most reliable first) ────────────────────
 #
@@ -70,52 +69,50 @@ from ENGINE.providers.Stream.R_039.R_039 import R039Provider   # Vidzee Hindi
 # arrive later and fill quality slots rather than winning the first-stream race.
 
 ACTIVE: list[Provider] = [
-    # ── Top 10 working providers (Hindi-first, multi-audio) ──────────────────
-    R039Provider(),   # Vidzee Hindi  — v6:Hindi server, Bollywood/South/K-drama Hindi dubs (NEW)
-    R038Provider(),   # MovieBox IN   — V3 signed API, IN region, Hindi dubs (VERIFIED)
-    R029Provider(),   # VidZee        — Hindi server, multi-audio HLS
-    R037Provider(),   # VidZee2       — TMDB-keyed, Hindi dub support
     R002Provider(),   # VidFast       — direct JSON API, fast
-    R033Provider(),   # VixSrc        — API + signed HLS, fast
     R026Provider(),   # VidLink       — enc-dec direct API, fast
+    R003Provider(),   # VidRock       — AES-encoded direct API, fast
     R009Provider(),   # RiveStream    — multi-source HLS, fast fan-out
-    R018Provider(),   # VegaMovies    — Hindi/Indian content
-    R034Provider(),   # 4KHDHub Hindi — Hindi dubbed/dual audio
+    R004Provider(),   # HexaSU        — enc-dec direct, fast
+    R028Provider(),   # VidEasy       — 14-server fan-out, concurrently fast
+    R030Provider(),   # Peachify      — 6-server GCM-decrypt, concurrently fast
+    R029Provider(),   # VidZee        — 8-server AES-CBC decrypt, concurrently fast
+    R001Provider(),   # 2Embed        — iframe (fast URL build, low quality)
+    R006Provider(),   # Xpass         — iframe embed
+    R007Provider(),   # VaplayerV2    — iframe / direct
+    R010Provider(),   # PrimeVids     — direct
+    R031Provider(),   # VidSrcXYZ     — 3-step decrypt chain (medium speed)
+    R033Provider(),   # VixSrc        — API + signed HLS, fast
+    R034Provider(),   # 4KHDHub Hindi — Indian site, Hindi dubbed/dual audio
     R036Provider(),   # Bollyflix     — Hindi/Bollywood movies & series
-    # ── Anime-specific (dedicated section) ───────────────────────────────────
+    R037Provider(),   # VidZee        — TMDB-keyed, Hindi dub support
+    R038Provider(),   # MovieBox IN   — V3 signed API, IN region, Hindi dubs
+    R032Provider(),   # MovieBox      — h5-api search/download/play (slow)
+    R005Provider(),   # AllMovieLand  — scraper
+    R008Provider(),   # DahmerMovies  — scraper
+    R011Provider(),   # KissKh        — scraper (Asian content)
+    R012Provider(),   # Castle        — AES API (Indian/multi-lang)
+    R013Provider(),   # HDRezka       — scraper (Russian)
+    R027Provider(),   # CineMacity    — Cloudflare + playerjs scraper
+    R018Provider(),   # VegaMovies    — scraper + host extractor
+    R019Provider(),   # HdHub4u       — scraper
+    R020Provider(),   # 4KHdHub       — scraper
+    R021Provider(),   # Movies4u      — scraper
+    R022Provider(),   # RogMovies     — scraper
+    R023Provider(),   # MultiMovies   — scraper + Cloudflare
+    R024Provider(),   # UhdMovies     — scraper + bypass
+    R025Provider(),   # Moviesmod     — scraper + bypass
+    # Anime-specific
     R014Provider(),   # AniZone
     R015Provider(),   # AniNeko
     R016Provider(),   # AnimeNoSub
     R017Provider(),   # AnimeWorld
 ]
 
-# ── DISABLED — unreliable, dead, or embed-only ───────────────────────────────
+# ── DISABLED — comment out or move here to pause a provider ──────────────────
 
 DISABLED: list[Provider] = [
-    R035Provider(),   # NetMirror OTT — DEAD (2026-10-02): net27.cc returns 'not found'
-    R001Provider(),   # 2Embed        — iframe only, not playable (filtered at API)
-    R006Provider(),   # Xpass         — iframe embed only
-    R007Provider(),   # VaplayerV2    — iframe / unreliable
-    R004Provider(),   # HexaSU        — unreliable
-    R028Provider(),   # VidEasy       — shutting down (404s)
-    R030Provider(),   # Peachify      — unreliable
-    R031Provider(),   # VidSrcXYZ     — slow decrypt chain
-    R003Provider(),   # VidRock       — redundant with VidFast/VidLink
-    R010Provider(),   # PrimeVids     — unreliable
-    R032Provider(),   # MovieBox      — slow, redundant with R038
-    R005Provider(),   # AllMovieLand  — scraper, slow
-    R008Provider(),   # DahmerMovies  — scraper, slow
-    R011Provider(),   # KissKh        — scraper, slow
-    R012Provider(),   # Castle        — unreliable
-    R013Provider(),   # HDRezka       — Russian, not relevant
-    R027Provider(),   # CineMacity    — Cloudflare issues
-    R019Provider(),   # HdHub4u       — scraper, slow
-    R020Provider(),   # 4KHdHub       — scraper, slow
-    R021Provider(),   # Movies4u      — scraper, slow
-    R022Provider(),   # RogMovies     — scraper, slow
-    R023Provider(),   # MultiMovies   — Cloudflare issues
-    R024Provider(),   # UhdMovies     — scraper, slow
-    R025Provider(),   # Moviesmod     — scraper, slow
+    R035Provider(),   # NetMirror OTT — DEAD (2026-10-02): net27.cc returns 'not found' for all titles
 ]
 
 # ── Internal registry ─────────────────────────────────────────────────────────
