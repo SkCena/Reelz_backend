@@ -127,6 +127,7 @@ from api.feed import router as feed_router
 from api.discover import router as discover_router
 from api.search import router as search_router
 from api.media import router as media_router
+from api.debug_providers import router as debug_router
 
 # ENGINE (scraping layer)
 from api.stream import router as stream_router
@@ -152,6 +153,7 @@ app.include_router(feed_router)
 app.include_router(discover_router)
 app.include_router(search_router)
 app.include_router(media_router)
+app.include_router(debug_router)
 app.include_router(stream_router)
 app.include_router(download_router)
 app.include_router(subtitle_router)
