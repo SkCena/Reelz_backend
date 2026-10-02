@@ -179,25 +179,14 @@ async def _fan_out(data: LinkData, category: ContentCategory) -> tuple[Optional[
 
         return local
 
-    tasks = {asyncio.ensure_future(invoke(p)): p for p in providers}
-    best_m3u8: Optional[dict] = None
-    best_mp4:  Optional[dict] = None
-    pending = set(tasks)
+    tasks = [asyncio.ensure_future(invoke(p)) for p in providers]
 
-    # First valid m3u8 wins early — serves the user fast
-    while pending:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-        for fut in done:
-            for entry in (fut.result() or []):
-                if entry["type"] == "m3u8" and best_m3u8 is None:
-                    best_m3u8 = entry
-                elif entry["type"] == "mp4" and best_mp4 is None:
-                    best_mp4 = entry
-        if best_m3u8:
-            for t in pending:
-                t.cancel()
-            await asyncio.gather(*pending, return_exceptions=True)
-            break
+    # Collect ALL providers — no early exit.
+    # The user wants every provider's streams (all languages, qualities,
+    # subtitles) so the app can offer real choices, not just the first m3u8.
+    # Each provider is already bounded by its own safe_run timeout, and they
+    # all run in parallel, so total wait = slowest provider, not the sum.
+    await asyncio.gather(*tasks, return_exceptions=True)
 
     # ── AI ranking: sort all collected streams ────────────────────────────────
     #
@@ -237,7 +226,19 @@ async def _fan_out(data: LinkData, category: ContentCategory) -> tuple[Optional[
     for i, e in enumerate(deduped):
         e["priority"] = i
 
-    winner = best_m3u8 or best_mp4
+    # Winner = first playable stream from the ranked list
+    # (prefers m3u8, then mp4 — same as the old early-exit preference,
+    # but chosen after seeing ALL providers, not just the fastest one).
+    winner = None
+    for e in deduped:
+        if e.get("type") == "m3u8" and e.get("playable", True):
+            winner = e
+            break
+    if winner is None:
+        for e in deduped:
+            if e.get("playable", True):
+                winner = e
+                break
     # Clean winner too
     if winner:
         winner = {k: v for k, v in winner.items() if not k.startswith("_")}
