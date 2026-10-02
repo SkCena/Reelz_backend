@@ -29,6 +29,15 @@ from urllib.parse import urlencode
 from ENGINE.providers.base import Provider, LinkData, Result, Stream, Subtitle
 from ENGINE.tools.http import get_client
 
+# MovieBox API client (vendored, MIT licensed)
+try:
+    from ENGINE.tools.movieboxapi.async_wrapper import AsyncMovieBoxClient
+    _HAS_MB_CLIENT = True
+except ImportError:
+    _HAS_MB_CLIENT = False
+except Exception:
+    _HAS_MB_CLIENT = False
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 _H5_BASE = "https://h5-api.aoneroom.com/wefeed-h5api-bff"
@@ -519,6 +528,42 @@ class R038Provider(Provider):
             )[:3]
 
             async def fetch_one(sid: str, lang: str):
+                # Try new MovieBox API client first (more reliable)
+                if _HAS_MB_CLIENT:
+                    try:
+                        mb = AsyncMovieBoxClient(region="IN", timeout=25.0)
+                        try:
+                            stream_result = await mb.get_stream(
+                                subject_id=str(sid),
+                                se=se if se > 0 else 0,
+                                ep=ep if ep > 0 else 0,
+                                resolution=1080,
+                            )
+                            if stream_result and stream_result.url:
+                                # Convert to dict format expected below
+                                info = {
+                                    "streams": [{
+                                        "url": stream_result.url,
+                                        "signCookie": stream_result.sign_cookie or "",
+                                        "resolutions": ",".join(
+                                            str(q.height) for q in (stream_result.qualities or [])
+                                            if hasattr(q, "height") and q.height
+                                        ) or "1080",
+                                        "id": stream_result.resource_id or "",
+                                    }],
+                                    "_via_mb_client": True,
+                                    "_subtitles": [
+                                        {"lang": s.lang, "url": s.url}
+                                        for s in (stream_result.subtitles or [])
+                                        if hasattr(s, "url") and s.url
+                                    ],
+                                }
+                                return sid, lang, info
+                        finally:
+                            mb.close()
+                    except Exception:
+                        pass  # fall through to legacy method
+                # Fallback to legacy _play_info
                 info = await self._play_info(sid, se, ep)
                 return sid, lang, info
 
