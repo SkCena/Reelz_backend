@@ -60,6 +60,7 @@ from ENGINE.providers.Stream.R_035.R_035 import R035Provider   # NetMirror OTT
 from ENGINE.providers.Stream.R_036.R_036 import R036Provider   # Bollyflix (Hindi)
 from ENGINE.providers.Stream.R_037.R_037 import R037Provider   # VidZee (Hindi dub)
 from ENGINE.providers.Stream.R_038.R_038 import R038Provider   # MovieBox IN
+from ENGINE.providers.Stream.R_039.R_039 import R039Provider   # Vidzee Hindi
 
 # ── ACTIVE — priority order (fastest/most reliable first) ────────────────────
 #
@@ -70,6 +71,7 @@ from ENGINE.providers.Stream.R_038.R_038 import R038Provider   # MovieBox IN
 
 ACTIVE: list[Provider] = [
     # ── Top 10 working providers (Hindi-first, multi-audio) ──────────────────
+    R039Provider(),   # Vidzee Hindi  — v6:Hindi server, Bollywood/South/K-drama Hindi dubs (NEW)
     R038Provider(),   # MovieBox IN   — V3 signed API, IN region, Hindi dubs (VERIFIED)
     R029Provider(),   # VidZee        — Hindi server, multi-audio HLS
     R037Provider(),   # VidZee2       — TMDB-keyed, Hindi dub support
