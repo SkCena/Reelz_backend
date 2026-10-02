@@ -24,7 +24,11 @@ from ENGINE.providers.base import Provider, LinkData, Result, Stream, Subtitle
 from ENGINE.tools.http import get_client
 
 
-NETMIRROR_BASE = "https://net27.cc"
+NETMIRROR_BASES = [
+    "https://net27.cc",
+    "https://net77.cc",
+]
+NETMIRROR_BASE = NETMIRROR_BASES[0]
 NETMIRROR_REFERER = "https://net27.cc/"
 
 # Fallback domains (NetMirror rotates; CNCVerse uses net52.cc)
@@ -138,12 +142,17 @@ class R035Provider(Provider):
             else:
                 base_query = "?type=movie"
 
-            # 1. Fetch default (original audio) embed
-            default_url = f"{NETMIRROR_BASE}/api/embed-tmdb/{tmdb_id}{base_query}"
-            default_data, variants_data = await asyncio.gather(
-                _fetch_json(client, default_url),
-                _fetch_json(client, f"{NETMIRROR_BASE}/api/variants-tmdb/{type_str}/{tmdb_id}"),
-            )
+            # 1. Fetch default (original audio) embed — try each base as fallback
+            default_data, variants_data = None, None
+            for base in NETMIRROR_BASES:
+                default_url = f"{base}/api/embed-tmdb/{tmdb_id}{base_query}"
+                variants_url = f"{base}/api/variants-tmdb/{type_str}/{tmdb_id}"
+                default_data, variants_data = await asyncio.gather(
+                    _fetch_json(client, default_url),
+                    _fetch_json(client, variants_url),
+                )
+                if default_data and default_data.get("ok"):
+                    break
 
             _extract_streams(default_data, "Original", result)
 
