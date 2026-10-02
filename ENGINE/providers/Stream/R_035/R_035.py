@@ -143,16 +143,23 @@ class R035Provider(Provider):
                 base_query = "?type=movie"
 
             # 1. Fetch default (original audio) embed — try each base as fallback
+            # Fetch variants independently so a variants failure doesn't kill dubs
             default_data, variants_data = None, None
             for base in NETMIRROR_BASES:
                 default_url = f"{base}/api/embed-tmdb/{tmdb_id}{base_query}"
-                variants_url = f"{base}/api/variants-tmdb/{type_str}/{tmdb_id}"
-                default_data, variants_data = await asyncio.gather(
-                    _fetch_json(client, default_url),
-                    _fetch_json(client, variants_url),
-                )
+                default_data = await _fetch_json(client, default_url)
                 if default_data and default_data.get("ok"):
+                    # Found working base — fetch variants from same base
+                    variants_url = f"{base}/api/variants-tmdb/{type_str}/{tmdb_id}"
+                    variants_data = await _fetch_json(client, variants_url)
                     break
+            # If variants failed but default worked, retry variants once
+            if default_data and default_data.get("ok") and not variants_data:
+                for base in NETMIRROR_BASES:
+                    variants_url = f"{base}/api/variants-tmdb/{type_str}/{tmdb_id}"
+                    variants_data = await _fetch_json(client, variants_url)
+                    if variants_data and variants_data.get("ok"):
+                        break
 
             _extract_streams(default_data, "Original", result)
 
