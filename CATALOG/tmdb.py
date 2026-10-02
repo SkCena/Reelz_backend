@@ -118,6 +118,8 @@ _SORT_MAP = {
 }
 
 # TMDB watch provider IDs (India region)
+# Note: JioHotstar (merged JioCinema + Disney+ Hotstar) — TMDB ID may have changed
+# after the 2025 merger. We try 122 (old Disney+ Hotstar) first.
 OTT_PROVIDERS = {
     "netflix":   "8",
     "prime":     "119",
@@ -172,6 +174,15 @@ async def discover(
         return cached
     data   = await _get(f"/discover/{mtype}", params)
     result = data or {"results": [], "total_pages": 0}
+    # Fallback for providers with no TMDB data (e.g. JioHotstar after merger):
+    # if provider filter returns nothing, fall back to popular Hindi content
+    if provider and not result.get("results"):
+        params.pop("with_watch_providers", None)
+        params.pop("watch_region", None)
+        params["with_original_language"] = "hi"
+        params["sort_by"] = "popularity.desc"
+        data   = await _get(f"/discover/{mtype}", params)
+        result = data or {"results": [], "total_pages": 0}
     await cache_set(cache_key, result, ttl=1800)
     return result
 
