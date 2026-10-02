@@ -34,6 +34,7 @@ class Stream:
     type: str                        # "m3u8" | "mp4" | "iframe"
     server: str = ""
     quality: Optional[str] = None
+    language: Optional[str] = None    # e.g. "Hindi", "English", "Original"
     headers: dict = field(default_factory=dict)
     # Optional: set this if the provider's response tells you when the URL expires.
     # Unix timestamp in milliseconds (e.g. int(time.time() * 1000) + 3_600_000).
