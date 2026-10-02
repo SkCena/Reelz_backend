@@ -185,8 +185,18 @@ async def _fan_out(data: LinkData, category: ContentCategory) -> tuple[Optional[
     # The user wants every provider's streams (all languages, qualities,
     # subtitles) so the app can offer real choices, not just the first m3u8.
     # Each provider is already bounded by its own safe_run timeout, and they
-    # all run in parallel, so total wait = slowest provider, not the sum.
-    await asyncio.gather(*tasks, return_exceptions=True)
+    # all run in parallel. But we cap the TOTAL wait at 20s so the app doesn't
+    # hang — whatever completes by then is returned, the rest are cancelled.
+    try:
+        await asyncio.wait_for(
+            asyncio.gather(*tasks, return_exceptions=True),
+            timeout=20.0,
+        )
+    except asyncio.TimeoutError:
+        for t in tasks:
+            if not t.done():
+                t.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
     # ── AI ranking: sort all collected streams ────────────────────────────────
     #
