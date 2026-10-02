@@ -25,6 +25,12 @@ _M3U_SOURCES = [
     "https://raw.githubusercontent.com/Mrbotrx/BDXI_KB/main/playlists/India.m3u8",
 ]
 
+# Sports M3U sources
+_SPORTS_SOURCES = [
+    "https://raw.githubusercontent.com/subash9860/iptv-football-cricket/main/index.m3u",
+    "https://iptv-org.github.io/iptv/categories/sports.m3u",
+]
+
 # Cache
 _cache: Dict = {"channels": [], "timestamp": 0}
 _CACHE_TTL = 3600  # 1 hour
@@ -74,11 +80,14 @@ def _parse_m3u(content: str) -> List[Dict]:
     return channels
 
 
-async def _fetch_channels() -> List[Dict]:
+async def _fetch_channels(sources: List[str] = None) -> List[Dict]:
     """Fetch channels from M3U sources with caching."""
+    sources = sources or _M3U_SOURCES
+    # Use different cache for sports
+    cache_key = "sports" if sources == _SPORTS_SOURCES else "channels"
     now = time.time()
-    if _cache["channels"] and (now - _cache["timestamp"]) < _CACHE_TTL:
-        return _cache["channels"]
+    if _cache.get(cache_key) and (now - _cache.get(f"{cache_key}_ts", 0)) < _CACHE_TTL:
+        return _cache[cache_key]
 
     from ENGINE.tools.http import get_client
 
@@ -86,7 +95,7 @@ async def _fetch_channels() -> List[Dict]:
     seen_urls = set()
 
     client = await get_client()
-    for source_url in _M3U_SOURCES:
+    for source_url in sources:
         try:
             resp = await client.get(source_url, timeout=30)
             if resp.status_code >= 400:
@@ -98,14 +107,13 @@ async def _fetch_channels() -> List[Dict]:
                     seen_urls.add(ch["url"])
                     all_channels.append(ch)
 
-            # If we got channels from first source, that's enough
             if all_channels:
                 break
         except Exception:
             continue
 
-    _cache["channels"] = all_channels
-    _cache["timestamp"] = now
+    _cache[cache_key] = all_channels
+    _cache[f"{cache_key}_ts"] = now
     return all_channels
 
 
@@ -143,6 +151,22 @@ async def get_live_categories(
         "ok": True,
         "data": {
             "categories": categories,
+        },
+        "error": None,
+    }
+
+
+@router.get("/live-tv/sports")
+async def get_sports_channels(
+    user_id: str = Depends(verify),
+):
+    """Get sports live channels."""
+    channels = await _fetch_channels(_SPORTS_SOURCES)
+    return {
+        "ok": True,
+        "data": {
+            "channels": channels,
+            "count": len(channels),
         },
         "error": None,
     }
