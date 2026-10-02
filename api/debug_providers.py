@@ -42,6 +42,26 @@ async def debug_provider(
         elif provider == "R-038":
             from ENGINE.providers.Stream.R_038.R_038 import R038Provider
             p = R038Provider()
+            # For R-038, test search step separately
+            try:
+                # Test token fetch first
+                token_start = time.time()
+                token = await p._h5_token()
+                result_data["steps"]["h5_token"] = {
+                    "duration_ms": int((time.time() - token_start) * 1000),
+                    "got_token": bool(token),
+                    "token_len": len(token) if token else 0,
+                }
+                # Then test search
+                search_start = time.time()
+                items = await p._h5_search("Fight Club" if tmdb_id == "550" else "", False)
+                result_data["steps"]["h5_search"] = {
+                    "duration_ms": int((time.time() - search_start) * 1000),
+                    "items_found": len(items),
+                    "sample_titles": [it.get("title", "")[:50] for it in items[:3]],
+                }
+            except Exception as e:
+                result_data["steps"]["h5_search"] = {"error": f"{type(e).__name__}: {e}"}
         elif provider == "R-018":
             from ENGINE.providers.Stream.R_018.R_018 import R018Provider
             p = R018Provider()
@@ -77,26 +97,6 @@ async def debug_provider(
                             result_data["steps"]["search"]["parse_error"] = str(e)
             except Exception as e:
                 result_data["steps"]["domain"] = {"error": f"{type(e).__name__}: {e}"}
-            # For R-038, test search step separately
-            try:
-                # Test token fetch first
-                token_start = time.time()
-                token = await p._h5_token()
-                result_data["steps"]["h5_token"] = {
-                    "duration_ms": int((time.time() - token_start) * 1000),
-                    "got_token": bool(token),
-                    "token_len": len(token) if token else 0,
-                }
-                # Then test search
-                search_start = time.time()
-                items = await p._h5_search("Fight Club" if tmdb_id == "550" else "", False)
-                result_data["steps"]["h5_search"] = {
-                    "duration_ms": int((time.time() - search_start) * 1000),
-                    "items_found": len(items),
-                    "sample_titles": [it.get("title", "")[:50] for it in items[:3]],
-                }
-            except Exception as e:
-                result_data["steps"]["h5_search"] = {"error": f"{type(e).__name__}: {e}"}
         else:
             result_data["status"] = "error"
             result_data["error"] = f"Unknown provider: {provider}"
