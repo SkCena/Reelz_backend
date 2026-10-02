@@ -133,6 +133,18 @@ async def discover(
         "vote_count.gte": 50,
         "include_adult":  "false",
     }
+    # For "newest": only already-released titles, not future/unannounced ones
+    if sort_by == "newest":
+        from datetime import date, timedelta
+        today = date.today().isoformat()
+        # last 12 months of releases
+        year_ago = (date.today() - timedelta(days=365)).isoformat()
+        if mtype == "movie":
+            params["primary_release_date.lte"] = today
+            params["primary_release_date.gte"] = year_ago
+        else:
+            params["first_air_date.lte"] = today
+            params["first_air_date.gte"] = year_ago
     if genre_id:
         params["with_genres"] = genre_id
     if language:
@@ -268,14 +280,16 @@ def _year(d: dict, is_movie: bool) -> Optional[str]:
 def normalise_card(d: dict, media_type: str) -> dict:
     """
     Convert a raw TMDB result to schema v3 MediaCard wire shape.
-    Only: id, title, poster_url, rating, media_type
     """
+    rd = d.get("release_date") or d.get("first_air_date") or ""
     return {
         "id":         f"{media_type}:{d['id']}",
         "title":      d.get("title") or d.get("name") or "",
         "poster_url": poster(d.get("poster_path")),
         "rating":     round(d.get("vote_average", 0.0), 1),
         "media_type": media_type,
+        "release_date": rd,
+        "year":       rd[:4] if rd else "",
     }
 
 
