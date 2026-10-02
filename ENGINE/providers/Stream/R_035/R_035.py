@@ -74,6 +74,7 @@ def _extract_streams(data: dict, label: str, result: Result):
             url=mp4_url,
             type="mp4",
             quality=f"{resolution}p" if resolution else "HD",
+            language=label,
             server=f"R-035 NetMirror [{label}]",
             playback_headers={"Referer": NETMIRROR_REFERER},
         ))
@@ -90,6 +91,7 @@ def _extract_streams(data: dict, label: str, result: Result):
                 url=url,
                 type="mp4",
                 quality=f"{res}p",
+                language=label,
                 server=f"R-035 NetMirror [{label}]",
                 playback_headers={"Referer": NETMIRROR_REFERER},
             ))
