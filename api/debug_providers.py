@@ -31,6 +31,7 @@ async def debug_provider(
         "error": None,
         "traceback": None,
         "duration_ms": 0,
+        "steps": {},
     }
     
     try:
@@ -41,6 +42,17 @@ async def debug_provider(
         elif provider == "R-038":
             from ENGINE.providers.Stream.R_038.R_038 import R038Provider
             p = R038Provider()
+            # For R-038, test search step separately
+            try:
+                search_start = time.time()
+                items = await p._h5_search("Fight Club" if tmdb_id == "550" else "", False)
+                result_data["steps"]["h5_search"] = {
+                    "duration_ms": int((time.time() - search_start) * 1000),
+                    "items_found": len(items),
+                    "sample_titles": [it.get("title", "")[:50] for it in items[:3]],
+                }
+            except Exception as e:
+                result_data["steps"]["h5_search"] = {"error": f"{type(e).__name__}: {e}"}
         else:
             result_data["status"] = "error"
             result_data["error"] = f"Unknown provider: {provider}"
