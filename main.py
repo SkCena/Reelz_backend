@@ -147,6 +147,9 @@ from api.payment import router as payment_router
 # Admin — full remote control (X-Admin-Token protected)
 from api.admin import router as admin_router
 
+# Live TV (India)
+from api.live_tv import router as live_tv_router
+
 app.include_router(health_router)
 app.include_router(config_router)
 app.include_router(feed_router)
@@ -162,6 +165,7 @@ app.include_router(insights_router)
 app.include_router(user_auth_router)
 app.include_router(payment_router)
 app.include_router(admin_router)
+app.include_router(live_tv_router)
 
 
 @app.get("/", include_in_schema=False)
