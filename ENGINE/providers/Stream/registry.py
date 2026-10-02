@@ -58,6 +58,7 @@ from ENGINE.providers.Stream.R_033.R_033 import R033Provider   # VixSrc
 from ENGINE.providers.Stream.R_034.R_034 import R034Provider   # 4KHDHub Hindi
 from ENGINE.providers.Stream.R_035.R_035 import R035Provider   # NetMirror OTT
 from ENGINE.providers.Stream.R_036.R_036 import R036Provider   # Bollyflix (Hindi)
+from ENGINE.providers.Stream.R_037.R_037 import R037Provider   # VidZee (Hindi dub)
 
 # ── ACTIVE — priority order (fastest/most reliable first) ────────────────────
 #
@@ -84,6 +85,7 @@ ACTIVE: list[Provider] = [
     R034Provider(),   # 4KHDHub Hindi — Indian site, Hindi dubbed/dual audio
     R035Provider(),   # NetMirror OTT — Netflix/Prime/Hotstar, Hindi dub fan-out
     R036Provider(),   # Bollyflix     — Hindi/Bollywood movies & series
+    R037Provider(),   # VidZee        — TMDB-keyed, Hindi dub support
     R032Provider(),   # MovieBox      — h5-api search/download/play (slow)
     R005Provider(),   # AllMovieLand  — scraper
     R008Provider(),   # DahmerMovies  — scraper
