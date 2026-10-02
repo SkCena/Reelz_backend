@@ -142,6 +142,8 @@ async def resolve_stream(
         seen.add(name)
         streams.append({
             "name":      name,
+            "language":  lang if lang and lang.lower() not in ("unknown", "und") else "",
+            "quality":   quality,
             "url":       url,
             "type":      "hls" if s.get("type") in ("m3u8", "hls") else "mp4",
             "headers":   _merge_headers(s.get("headers"), s.get("referer"), s.get("origin"), s.get("user_agent")),
@@ -154,6 +156,8 @@ async def resolve_stream(
         _bname = _blang if _blang and _blang.lower() not in ("unknown", "und") else (_bqual or "Stream")
         streams = [{
             "name":      _bname,
+            "language":  _blang if _blang and _blang.lower() not in ("unknown", "und") else "",
+            "quality":   _bqual,
             "url":       best.get("url", ""),
             "type":      "hls" if best.get("type") in ("m3u8", "hls") else "mp4",
             "headers":   _merge_headers(best.get("headers"), best.get("referer"), best.get("origin"), best.get("user_agent")),
