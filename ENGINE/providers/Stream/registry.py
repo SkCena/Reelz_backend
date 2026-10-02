@@ -62,6 +62,7 @@ from ENGINE.providers.Stream.R_037.R_037 import R037Provider   # VidZee (Hindi d
 from ENGINE.providers.Stream.R_038.R_038 import R038Provider   # MovieBox IN
 from ENGINE.providers.Stream.R_039.R_039 import R039Provider   # Vidzee
 from ENGINE.providers.Stream.R_040.R_040 import R040Provider   # AniZone
+from ENGINE.providers.Stream.R_041.R_041 import R041Provider   # Netnaija
 
 # ── ACTIVE — priority order (fastest/most reliable first) ────────────────────
 #
@@ -91,6 +92,7 @@ ACTIVE: list[Provider] = [
     R038Provider(),   # MovieBox IN   — V3 signed API, IN region, Hindi dubs
     R039Provider(),   # Vidzee        — dcloud/tik servers, Hindi via languages endpoint
     R040Provider(),   # AniZone       — anime multi-audio, title-based search
+    R041Provider(),   # Netnaija      — wefeed platform, Hindi/Tamil/Telugu dubs
     R032Provider(),   # MovieBox      — h5-api search/download/play (slow)
     R005Provider(),   # AllMovieLand  — scraper
     R008Provider(),   # DahmerMovies  — scraper
