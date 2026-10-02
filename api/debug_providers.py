@@ -44,6 +44,15 @@ async def debug_provider(
             p = R038Provider()
             # For R-038, test search step separately
             try:
+                # Test token fetch first
+                token_start = time.time()
+                token = await p._h5_token()
+                result_data["steps"]["h5_token"] = {
+                    "duration_ms": int((time.time() - token_start) * 1000),
+                    "got_token": bool(token),
+                    "token_len": len(token) if token else 0,
+                }
+                # Then test search
                 search_start = time.time()
                 items = await p._h5_search("Fight Club" if tmdb_id == "550" else "", False)
                 result_data["steps"]["h5_search"] = {
