@@ -42,6 +42,41 @@ async def debug_provider(
         elif provider == "R-038":
             from ENGINE.providers.Stream.R_038.R_038 import R038Provider
             p = R038Provider()
+        elif provider == "R-018":
+            from ENGINE.providers.Stream.R_018.R_018 import R018Provider
+            p = R018Provider()
+            # For R-018, test domain resolution and search separately
+            try:
+                from ENGINE.tools.domains import get_domain
+                dom_start = time.time()
+                domain = await get_domain("vegamovies")
+                result_data["steps"]["domain"] = {
+                    "duration_ms": int((time.time() - dom_start) * 1000),
+                    "domain": domain,
+                }
+                if domain:
+                    from ENGINE.tools.scraper import cf_get
+                    import json
+                    search_start = time.time()
+                    html = await cf_get(f"{domain}/search.php?q=Fight+Club", referer=domain)
+                    result_data["steps"]["search"] = {
+                        "duration_ms": int((time.time() - search_start) * 1000),
+                        "html_len": len(html) if html else 0,
+                        "is_json": bool(html and html.strip().startswith("{")),
+                    }
+                    if html and html.strip().startswith("{"):
+                        try:
+                            j = json.loads(html)
+                            hits = j.get("hits", [])
+                            result_data["steps"]["search"]["hits"] = len(hits)
+                            if hits:
+                                doc = hits[0].get("document", {})
+                                result_data["steps"]["search"]["first_title"] = doc.get("post_title", "")[:80]
+                                result_data["steps"]["search"]["permalink"] = doc.get("permalink", "")
+                        except Exception as e:
+                            result_data["steps"]["search"]["parse_error"] = str(e)
+            except Exception as e:
+                result_data["steps"]["domain"] = {"error": f"{type(e).__name__}: {e}"}
             # For R-038, test search step separately
             try:
                 # Test token fetch first
