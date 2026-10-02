@@ -61,6 +61,7 @@ from ENGINE.providers.Stream.R_036.R_036 import R036Provider   # Bollyflix (Hind
 from ENGINE.providers.Stream.R_037.R_037 import R037Provider   # VidZee (Hindi dub)
 from ENGINE.providers.Stream.R_038.R_038 import R038Provider   # MovieBox IN
 from ENGINE.providers.Stream.R_039.R_039 import R039Provider   # Vidzee
+from ENGINE.providers.Stream.R_040.R_040 import R040Provider   # AniZone
 
 # ── ACTIVE — priority order (fastest/most reliable first) ────────────────────
 #
@@ -89,6 +90,7 @@ ACTIVE: list[Provider] = [
     R037Provider(),   # VidZee        — TMDB-keyed, Hindi dub support
     R038Provider(),   # MovieBox IN   — V3 signed API, IN region, Hindi dubs
     R039Provider(),   # Vidzee        — dcloud/tik servers, Hindi via languages endpoint
+    R040Provider(),   # AniZone       — anime multi-audio, title-based search
     R032Provider(),   # MovieBox      — h5-api search/download/play (slow)
     R005Provider(),   # AllMovieLand  — scraper
     R008Provider(),   # DahmerMovies  — scraper
