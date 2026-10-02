@@ -117,12 +117,23 @@ _SORT_MAP = {
     "newest":     "primary_release_date.desc",
 }
 
+# TMDB watch provider IDs (India region)
+OTT_PROVIDERS = {
+    "netflix":   "8",
+    "prime":     "119",
+    "hotstar":   "122",
+    "sonyliv":   "237",
+    "zee5":      "232",
+    "appletv":   "350",
+}
+
 async def discover(
     media_type: str = "movie",
     genre_id: Optional[str] = None,
     sort_by: str = "popularity",
     page: int = 1,
     language: Optional[str] = None,
+    provider: Optional[str] = None,
     **_kwargs,
 ) -> dict:
     mtype     = "movie" if media_type == "movie" else "tv"
@@ -149,8 +160,13 @@ async def discover(
         params["with_genres"] = genre_id
     if language:
         params["with_original_language"] = language
+    if provider:
+        prov_id = OTT_PROVIDERS.get(provider.lower())
+        if prov_id:
+            params["with_watch_providers"] = prov_id
+            params["watch_region"] = "IN"
 
-    cache_key = f"tmdb:discover:{mtype}:{sort_by}:{genre_id}:{page}:{language}"
+    cache_key = f"tmdb:discover:{mtype}:{sort_by}:{genre_id}:{page}:{language}:{provider}"
     cached    = await cache_get(cache_key)
     if cached:
         return cached
