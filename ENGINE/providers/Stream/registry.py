@@ -84,7 +84,6 @@ ACTIVE: list[Provider] = [
     R031Provider(),   # VidSrcXYZ     — 3-step decrypt chain (medium speed)
     R033Provider(),   # VixSrc        — API + signed HLS, fast
     R034Provider(),   # 4KHDHub Hindi — Indian site, Hindi dubbed/dual audio
-    R035Provider(),   # NetMirror OTT — Netflix/Prime/Hotstar, Hindi dub fan-out
     R036Provider(),   # Bollyflix     — Hindi/Bollywood movies & series
     R037Provider(),   # VidZee        — TMDB-keyed, Hindi dub support
     R038Provider(),   # MovieBox IN   — V3 signed API, IN region, Hindi dubs
@@ -112,7 +111,9 @@ ACTIVE: list[Provider] = [
 
 # ── DISABLED — comment out or move here to pause a provider ──────────────────
 
-DISABLED: list[Provider] = []
+DISABLED: list[Provider] = [
+    R035Provider(),   # NetMirror OTT — DEAD (2026-10-02): net27.cc returns 'not found' for all titles
+]
 
 # ── Internal registry ─────────────────────────────────────────────────────────
 
