@@ -6,7 +6,7 @@ Same H5 API, same V3 hosts, same signing keys.
 Only Referer/Origin differ (netnaija.film).
 
 Hindi + Tamil + Telugu dubs available as separate stream cards.
-"""
+
 
 Flow:
   1. H5 search with IN headers -> subjectId (+ separate "[Hindi]" variant id)
