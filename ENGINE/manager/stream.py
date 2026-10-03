@@ -181,23 +181,45 @@ async def _fan_out(data: LinkData, category: ContentCategory) -> tuple[Optional[
 
     tasks = [asyncio.ensure_future(invoke(p)) for p in providers]
 
-    # Collect ALL providers — no early exit.
-    # The user wants every provider's streams (all languages, qualities,
-    # subtitles) so the app can offer real choices, not just the first m3u8.
-    # Each provider is already bounded by its own safe_run timeout, and they
-    # all run in parallel. But we cap the TOTAL wait at 12s so the app doesn't
-    # hang — whatever completes by then is returned, the rest are cancelled.
-    # (Reduced from 20s for faster loading on good connections.)
+    # ── FAST PATH: Early exit for reliable providers ──────────────────────────
+    # Like the official MovieBox app, return immediately when a trusted provider
+    # (R038 MovieBox IN, R039 Vidzee, R041 Netnaija) delivers good streams.
+    # Don't wait 12s for all 40 providers when we already have Hindi + quality.
+    FAST_PROVIDERS = {"R-038", "R-039", "R-041"}
+    fast_done = asyncio.Event()
+
+    async def _fast_path_watcher():
+        """Check every 0.5s if a fast provider has 3+ streams. If so, signal."""
+        for _ in range(10):  # 5 seconds max
+            await asyncio.sleep(0.5)
+            for pid in FAST_PROVIDERS:
+                streams = provider_streams.get(pid, [])
+                playable = [s for s in streams if s.get("url")]
+                if len(playable) >= 3:
+                    fast_done.set()
+                    return
+
+    watcher = asyncio.ensure_future(_fast_path_watcher())
+
+    # Wait for either: all tasks done, fast path triggered, or 12s timeout
     try:
         await asyncio.wait_for(
-            asyncio.gather(*tasks, return_exceptions=True),
+            asyncio.wait(
+                [asyncio.gather(*tasks, return_exceptions=True),
+                 fast_done.wait()],
+                return_when=asyncio.FIRST_COMPLETED,
+            ),
             timeout=12.0,
         )
     except asyncio.TimeoutError:
-        for t in tasks:
-            if not t.done():
-                t.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
+        pass
+
+    # Cancel remaining tasks (slow providers)
+    for t in tasks:
+        if not t.done():
+            t.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
+    watcher.cancel()
 
     # ── AI ranking: sort all collected streams ────────────────────────────────
     #
