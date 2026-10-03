@@ -183,35 +183,33 @@ async def _fan_out(data: LinkData, category: ContentCategory) -> tuple[Optional[
 
     # ── FAST PATH: Early exit for reliable providers ──────────────────────────
     # Like the official MovieBox app, return immediately when a trusted provider
-    # (R038 MovieBox IN, R039 Vidzee, R041 Netnaija) delivers good streams.
-    # Don't wait 12s for all 40 providers when we already have Hindi + quality.
-    FAST_PROVIDERS = {"R-038", "R-039", "R-041"}
-    fast_done = asyncio.Event()
+    # (R038 MovieBox IN, R041 Netnaija) delivers good streams.
+    FAST_PROVIDERS = {"R-038", "R-041"}
 
-    async def _fast_path_watcher():
-        """Check every 0.5s if a fast provider has 3+ streams. If so, signal."""
-        for _ in range(10):  # 5 seconds max
-            await asyncio.sleep(0.5)
+    async def _wait_with_fast_path():
+        """Wait for tasks, but check every 0.5s if fast providers delivered."""
+        start = asyncio.get_event_loop().time()
+        while True:
+            # Check if fast providers have 3+ streams
             for pid in FAST_PROVIDERS:
                 streams = provider_streams.get(pid, [])
                 playable = [s for s in streams if s.get("url")]
                 if len(playable) >= 3:
-                    fast_done.set()
-                    return
+                    return True  # Fast path triggered
 
-    watcher = asyncio.ensure_future(_fast_path_watcher())
+            # Check if all tasks done
+            if all(t.done() for t in tasks):
+                return False
 
-    # Wait for either: all tasks done, fast path triggered, or 12s timeout
+            # Check timeout (12s)
+            if asyncio.get_event_loop().time() - start > 12.0:
+                return False
+
+            await asyncio.sleep(0.5)
+
     try:
-        await asyncio.wait_for(
-            asyncio.wait(
-                [asyncio.gather(*tasks, return_exceptions=True),
-                 fast_done.wait()],
-                return_when=asyncio.FIRST_COMPLETED,
-            ),
-            timeout=12.0,
-        )
-    except asyncio.TimeoutError:
+        await _wait_with_fast_path()
+    except Exception:
         pass
 
     # Cancel remaining tasks (slow providers)
@@ -219,7 +217,6 @@ async def _fan_out(data: LinkData, category: ContentCategory) -> tuple[Optional[
         if not t.done():
             t.cancel()
     await asyncio.gather(*tasks, return_exceptions=True)
-    watcher.cancel()
 
     # ── AI ranking: sort all collected streams ────────────────────────────────
     #
