@@ -72,53 +72,57 @@ from ENGINE.providers.Stream.R_041.R_041 import R041Provider   # Netnaija
 # arrive later and fill quality slots rather than winning the first-stream race.
 
 ACTIVE: list[Provider] = [
-    R002Provider(),   # VidFast       — direct JSON API, fast
-    R026Provider(),   # VidLink       — enc-dec direct API, fast
-    R003Provider(),   # VidRock       — AES-encoded direct API, fast
-    R009Provider(),   # RiveStream    — multi-source HLS, fast fan-out
-    R004Provider(),   # HexaSU        — enc-dec direct, fast
-    R028Provider(),   # VidEasy       — 14-server fan-out, concurrently fast
-    R030Provider(),   # Peachify      — 6-server GCM-decrypt, concurrently fast
-    R029Provider(),   # VidZee        — 8-server AES-CBC decrypt, concurrently fast
-    R001Provider(),   # 2Embed        — iframe (fast URL build, low quality)
-    R006Provider(),   # Xpass         — iframe embed
-    R007Provider(),   # VaplayerV2    — iframe / direct
-    R010Provider(),   # PrimeVids     — direct
-    R031Provider(),   # VidSrcXYZ     — 3-step decrypt chain (medium speed)
-    R033Provider(),   # VixSrc        — API + signed HLS, fast
-    R034Provider(),   # 4KHDHub Hindi — Indian site, Hindi dubbed/dual audio
-    R036Provider(),   # Bollyflix     — Hindi/Bollywood movies & series
-    R037Provider(),   # VidZee        — TMDB-keyed, Hindi dub support
-    R038Provider(),   # MovieBox IN   — V3 signed API, IN region, Hindi dubs
-    R039Provider(),   # Vidzee        — dcloud/tik servers, Hindi via languages endpoint
-    R040Provider(),   # AniZone       — anime multi-audio, title-based search
-    R041Provider(),   # Netnaija      — wefeed platform, Hindi/Tamil/Telugu dubs
-    R032Provider(),   # MovieBox      — h5-api search/download/play (slow)
-    R005Provider(),   # AllMovieLand  — scraper
-    R008Provider(),   # DahmerMovies  — scraper
-    R011Provider(),   # KissKh        — scraper (Asian content)
-    R012Provider(),   # Castle        — AES API (Indian/multi-lang)
-    R013Provider(),   # HDRezka       — scraper (Russian)
-    R027Provider(),   # CineMacity    — Cloudflare + playerjs scraper
-    R018Provider(),   # VegaMovies    — scraper + host extractor
-    R019Provider(),   # HdHub4u       — scraper
-    R020Provider(),   # 4KHdHub       — scraper
-    R021Provider(),   # Movies4u      — scraper
-    R022Provider(),   # RogMovies     — scraper
-    R023Provider(),   # MultiMovies   — scraper + Cloudflare
-    R024Provider(),   # UhdMovies     — scraper + bypass
-    R025Provider(),   # Moviesmod     — scraper + bypass
-    # Anime-specific
-    R014Provider(),   # AniZone
+    # ── MovieBox family ONLY (like user's old APK) ───────────────────────────
+    # Direct wefeed API - fast, reliable, Hindi dubs
+    # No other providers needed - this is the proven approach
+    R038Provider(),   # MovieBox IN   — V3 signed API, IN region, Hindi dubs (PRIMARY)
+    R041Provider(),   # Netnaija      — wefeed platform, Hindi/Tamil/Telugu dubs (BACKUP)
+]
+
+# ── DISABLED — not needed (user wants MovieBox-only like their old APK) ──────
+
+DISABLED: list[Provider] = [
+    R035Provider(),   # NetMirror OTT — DEAD
+    # All non-MovieBox providers disabled per user request (2026-10-03)
+    # User's old APK used MovieBox API directly - same approach now
+    R002Provider(),   # VidFast
+    R026Provider(),   # VidLink
+    R003Provider(),   # VidRock
+    R009Provider(),   # RiveStream
+    R004Provider(),   # HexaSU
+    R028Provider(),   # VidEasy
+    R030Provider(),   # Peachify
+    R029Provider(),   # VidZee
+    R001Provider(),   # 2Embed
+    R006Provider(),   # Xpass
+    R007Provider(),   # VaplayerV2
+    R010Provider(),   # PrimeVids
+    R031Provider(),   # VidSrcXYZ
+    R033Provider(),   # VixSrc
+    R034Provider(),   # 4KHDHub Hindi
+    R036Provider(),   # Bollyflix
+    R037Provider(),   # VidZee2
+    R039Provider(),   # Vidzee
+    R040Provider(),   # AniZone
+    R032Provider(),   # MovieBox (old, slow)
+    R005Provider(),   # AllMovieLand
+    R008Provider(),   # DahmerMovies
+    R011Provider(),   # KissKh
+    R012Provider(),   # Castle
+    R013Provider(),   # HDRezka
+    R027Provider(),   # CineMacity
+    R018Provider(),   # VegaMovies
+    R019Provider(),   # HdHub4u
+    R020Provider(),   # 4KHdHub
+    R021Provider(),   # Movies4u
+    R022Provider(),   # RogMovies
+    R023Provider(),   # MultiMovies
+    R024Provider(),   # UhdMovies
+    R025Provider(),   # Moviesmod
+    R014Provider(),   # AniZone (old)
     R015Provider(),   # AniNeko
     R016Provider(),   # AnimeNoSub
     R017Provider(),   # AnimeWorld
-]
-
-# ── DISABLED — comment out or move here to pause a provider ──────────────────
-
-DISABLED: list[Provider] = [
-    R035Provider(),   # NetMirror OTT — DEAD (2026-10-02): net27.cc returns 'not found' for all titles
 ]
 
 # ── Internal registry ─────────────────────────────────────────────────────────
